@@ -1,6 +1,7 @@
-"""Fetch recent journal articles from CrossRef API and digest abstracts."""
+"""Fetch recent journal articles from CrossRef API and classify with Claude."""
 
 import asyncio
+import os
 import re
 import yaml
 from dataclasses import dataclass, field
@@ -8,13 +9,23 @@ from datetime import date, timedelta
 from pathlib import Path
 from typing import Optional
 
+import anthropic
 import httpx
 
 from . import config
 
 SOURCE_DIR = Path(__file__).parent.parent / "source"
-
 JATS_TAG = re.compile(r"<[^>]+>")
+
+# Pre-screen: require at least one of these before sending to LLM
+# (keeps API calls low — only articles that smell oncology-related get classified)
+_PRESCREEN_TERMS = [
+    "breast", "mammary", "HER2", "TNBC", "CDK4", "CDK6",
+    "trastuzumab", "pertuzumab", "sacituzumab", "T-DXd", "Enhertu",
+    "ribociclib", "palbociclib", "abemaciclib", "olaparib", "talazoparib",
+    "ESR1", "imlunestrant", "elacestrant", "fulvestrant",
+    "DESTINY-Breast", "ASCENT", "NATALEE", "monarchE",
+]
 
 
 @dataclass
@@ -25,7 +36,7 @@ class JournalArticle:
     authors: list[str]
     published: Optional[str]
     abstract: str
-    abstract_digest: str      # condensed key sentences
+    abstract_digest: str
     tags: list[str] = field(default_factory=list)
     url: str = ""
 
@@ -41,15 +52,12 @@ def _crossref_email() -> str:
 
 
 def _clean_abstract(raw: str) -> str:
-    """Strip JATS XML tags from CrossRef abstracts."""
     return re.sub(r"\s+", " ", JATS_TAG.sub("", raw)).strip()
 
 
 def _digest_abstract(abstract: str, max_chars: int = 400) -> str:
-    """Extract the most informative sentences from an abstract."""
     if not abstract:
         return ""
-    # Prefer sentences containing result-signal words
     signal_words = [
         "significantly", "improved", "reduced", "increased", "demonstrated",
         "showed", "resulted", "HR ", "hazard ratio", "OS ", "PFS ", "ORR",
@@ -57,31 +65,27 @@ def _digest_abstract(abstract: str, max_chars: int = 400) -> str:
         "approved", "primary endpoint", "statistically",
     ]
     sentences = re.split(r"(?<=[.!?])\s+", abstract)
-    scored = []
-    for s in sentences:
-        score = sum(1 for w in signal_words if w.lower() in s.lower())
-        scored.append((score, s))
-    scored.sort(key=lambda x: -x[0])
-    # Take highest-scoring sentences up to max_chars
-    digest_parts = []
-    total = 0
+    scored = sorted(
+        ((sum(1 for w in signal_words if w.lower() in s.lower()), s) for s in sentences),
+        key=lambda x: -x[0],
+    )
+    parts, total = [], 0
     for _, s in scored:
         if total + len(s) > max_chars:
             break
-        digest_parts.append(s)
+        parts.append(s)
         total += len(s)
-    return " ".join(digest_parts).strip() if digest_parts else abstract[:max_chars]
+    return " ".join(parts).strip() if parts else abstract[:max_chars]
 
 
 def _extract_tags(text: str) -> list[str]:
-    kws = config.keywords()
     tl = text.lower()
-    return list(dict.fromkeys(k for k in kws if k.lower() in tl))
+    return list(dict.fromkeys(k for k in config.keywords() if k.lower() in tl))
 
 
-def _is_bc_relevant(text: str) -> bool:
+def _passes_prescreen(text: str) -> bool:
     tl = text.lower()
-    return any(k.lower() in tl for k in config.keywords())
+    return any(t.lower() in tl for t in _PRESCREEN_TERMS)
 
 
 def _pub_date(item: dict) -> Optional[str]:
@@ -91,7 +95,7 @@ def _pub_date(item: dict) -> Optional[str]:
         or item.get("published-online", {}).get("date-parts")
         or [[]]
     )
-    dp = parts[0] if parts else []
+    dp = (parts or [[]])[0]
     if len(dp) >= 3:
         return f"{dp[0]:04d}-{dp[1]:02d}-{dp[2]:02d}"
     if len(dp) == 2:
@@ -100,6 +104,70 @@ def _pub_date(item: dict) -> Optional[str]:
         return f"{dp[0]:04d}"
     return None
 
+
+# ── LLM classifier ────────────────────────────────────────────────────────────
+
+_STRICT_TERMS = ["breast", "mammary"]
+
+
+def _strict_fallback(candidates: list[tuple[str, str]], disease: str) -> list[bool]:
+    """Fallback when no API key: require disease phrase in title+abstract."""
+    phrase = disease.lower()
+    return [phrase in (t + " " + a).lower() for t, a in candidates]
+
+
+def _llm_filter(
+    candidates: list[tuple[str, str]],   # [(title, abstract), ...]
+    disease: str = "breast cancer",
+) -> list[bool]:
+    """
+    Ask Claude Haiku to classify each article as breast-cancer-relevant.
+    Returns a list of bools aligned with candidates.
+    Batches all titles in one API call to minimise latency/cost.
+    """
+    if not candidates:
+        return []
+
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not api_key:
+        # No API key — strict keyword fallback (no fail-open to avoid false positives)
+        return _strict_fallback(candidates, disease)
+
+    numbered = "\n".join(
+        f"{i+1}. TITLE: {t}\n   ABSTRACT: {a[:300] or '(no abstract)'}"
+        for i, (t, a) in enumerate(candidates)
+    )
+
+    prompt = f"""You are a medical literature classifier. For each article below, decide if it is primarily about {disease} — meaning the main study population or primary topic is {disease} (not just a disease that shares some biomarkers like HER2 with other cancers).
+
+Reply with ONLY a JSON array of true/false values, one per article, in order.
+Example for 3 articles: [true, false, true]
+
+Articles:
+{numbered}"""
+
+    client = anthropic.Anthropic(api_key=api_key)
+    try:
+        msg = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=256,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        raw = msg.content[0].text.strip()
+        # parse JSON array
+        match = re.search(r"\[.*?\]", raw, re.DOTALL)
+        if match:
+            import json
+            result = json.loads(match.group())
+            if len(result) == len(candidates):
+                return [bool(r) for r in result]
+    except Exception:
+        pass
+
+    return _strict_fallback(candidates, disease)  # API error — strict fallback
+
+
+# ── CrossRef fetch ─────────────────────────────────────────────────────────────
 
 async def _fetch_journal(
     client: httpx.AsyncClient,
@@ -119,36 +187,47 @@ async def _fetch_journal(
         "order": "desc",
         "select": "DOI,title,author,abstract,published,published-print,published-online,URL,container-title",
     }
-    headers = {
-        "User-Agent": f"breast-cancer-uptodate/1.0 (mailto:{email})",
-    }
-
     try:
         r = await client.get(
             "https://api.crossref.org/works",
             params=params,
-            headers=headers,
+            headers={"User-Agent": f"breast-cancer-uptodate/1.0 (mailto:{email})"},
             timeout=25,
         )
         r.raise_for_status()
     except Exception:
         return []
 
-    articles = []
-    for item in r.json().get("message", {}).get("items", []):
-        title_list = item.get("title", [])
-        title = title_list[0] if title_list else ""
+    # Build raw candidates
+    raw_items = r.json().get("message", {}).get("items", [])
+    candidates = []
+    raw_map = []   # keep originals aligned
+
+    for item in raw_items:
+        title = (item.get("title") or [""])[0]
         if not title or len(title) < 10:
             continue
-
-        raw_abstract = item.get("abstract", "")
-        abstract = _clean_abstract(raw_abstract)
+        abstract = _clean_abstract(item.get("abstract", ""))
         combined = title + " " + abstract
 
-        if bc_filter and not _is_bc_relevant(combined):
+        if bc_filter and not _passes_prescreen(combined):
+            continue   # definitely not oncology — skip before LLM
+
+        candidates.append((title, abstract))
+        raw_map.append(item)
+
+    if not candidates:
+        return []
+
+    # LLM classification (one batched API call)
+    disease = journal.get("disease", "breast cancer")
+    keep = _llm_filter(candidates, disease=disease)
+
+    articles = []
+    for (title, abstract), item, is_bc in zip(candidates, raw_map, keep):
+        if not is_bc:
             continue
 
-        # Authors: last name only, max 4
         authors_raw = item.get("author", [])
         authors = [
             f"{a.get('family', '')} {a.get('given', '')[:1]}".strip()
@@ -158,44 +237,37 @@ async def _fetch_journal(
             authors.append("et al.")
 
         doi = item.get("DOI", "")
-        pub = _pub_date(item)
-        url = f"https://doi.org/{doi}" if doi else item.get("URL", "")
-        journal_name = (item.get("container-title") or [journal.get("full_name", journal["issn"])])[0]
+        journal_name = (item.get("container-title") or [journal.get("full_name", issn)])[0]
 
         articles.append(JournalArticle(
             title=title,
             doi=doi,
             journal=journal_name,
             authors=authors,
-            published=pub,
+            published=_pub_date(item),
             abstract=abstract,
             abstract_digest=_digest_abstract(abstract),
-            tags=_extract_tags(combined),
-            url=url,
+            tags=_extract_tags(title + " " + abstract),
+            url=f"https://doi.org/{doi}" if doi else item.get("URL", ""),
         ))
 
     return articles
 
 
 async def fetch_all() -> dict[str, list[JournalArticle]]:
-    """Fetch articles from all configured journals. Returns {journal_name: [JournalArticle]}."""
     journals = _load_journals()
     email = _crossref_email()
-
     async with httpx.AsyncClient() as client:
-        tasks = [_fetch_journal(client, j, email) for j in journals]
-        results = await asyncio.gather(*tasks)
-
+        results = await asyncio.gather(*[_fetch_journal(client, j, email) for j in journals])
     return {j["name"]: arts for j, arts in zip(journals, results)}
 
 
 def format_articles_md(results: dict[str, list[JournalArticle]]) -> str:
-    """Render journal articles as a markdown section for the weekly report."""
     if not any(results.values()):
         return ""
 
     lines = ["\n## 文獻速報 — CrossRef 期刊\n"]
-    lines.append("> 資料來源：CrossRef API · 僅顯示含摘要之乳癌相關論文\n")
+    lines.append("> 資料來源：CrossRef API · 以 Claude AI 確認為乳癌相關論文\n")
 
     for journal_name, articles in results.items():
         if not articles:
@@ -207,22 +279,19 @@ def format_articles_md(results: dict[str, list[JournalArticle]]) -> str:
 
         lines.append(f"\n### {journal_name}（{len(articles)} 篇乳癌相關）\n")
 
-        if with_abstract:
-            for a in with_abstract[:10]:
-                authors_str = ", ".join(a.authors)
-                lines.append(f"#### [{a.title}]({a.url})")
-                lines.append(f"_{authors_str}_ · {a.published or '—'} · {a.journal}")
-                lines.append("")
-                lines.append(f"> {a.abstract_digest}")
-                if a.tags:
-                    lines.append(f"\n`{'` `'.join(a.tags[:5])}`")
-                lines.append("")
+        for a in with_abstract[:10]:
+            lines.append(f"#### [{a.title}]({a.url})")
+            lines.append(f"_{', '.join(a.authors)}_ · {a.published or '—'} · {a.journal}")
+            lines.append("")
+            lines.append(f"> {a.abstract_digest}")
+            if a.tags:
+                lines.append(f"\n`{'` `'.join(a.tags[:5])}`")
+            lines.append("")
 
         if without:
-            lines.append("**摘要未提供（CrossRef 未收錄）：**\n")
+            lines.append("**摘要未提供：**\n")
             for a in without[:8]:
-                authors_str = ", ".join(a.authors)
-                lines.append(f"- [{a.title}]({a.url}) — _{authors_str}_ ({a.published or '—'})")
+                lines.append(f"- [{a.title}]({a.url}) — _{', '.join(a.authors)}_ ({a.published or '—'})")
             lines.append("")
 
     return "\n".join(lines)
