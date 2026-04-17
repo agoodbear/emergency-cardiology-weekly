@@ -13,18 +13,17 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: write   # needed to push to wiki
+      contents: write
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2   # need parent to detect changed files
+          fetch-depth: 2
 
       - name: Find changed report files
         id: changed
         run: |
-          # On workflow_dispatch, publish all reports; on push, only changed ones
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             files=$(find reports -name "*.md" | sort)
           else
@@ -33,40 +32,44 @@ jobs:
           echo "files<<EOF" >> "$GITHUB_OUTPUT"
           echo "$files" >> "$GITHUB_OUTPUT"
           echo "EOF" >> "$GITHUB_OUTPUT"
-          echo "Changed report files:"
-          echo "$files"
+          echo "Changed report files: $files"
 
-      - name: Clone wiki
+      - name: Setup wiki
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.wiki.git" wiki
-          # Initialise wiki with a Home page if it's empty (first run)
-          if [ ! -f wiki/Home.md ]; then
-            echo "# 乳癌治療趨勢週報 Wiki" > wiki/Home.md
-            echo "" >> wiki/Home.md
-            echo "自動發布每週乳癌治療趨勢報告。" >> wiki/Home.md
-            echo "" >> wiki/Home.md
-            echo "| 週次 | 報告 |" >> wiki/Home.md
-            echo "|------|------|" >> wiki/Home.md
+          WIKI_URL="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.wiki.git"
+
+          # Try to clone existing wiki; if it doesn't exist, bootstrap it
+          if git clone "$WIKI_URL" wiki 2>/dev/null; then
+            echo "Cloned existing wiki."
+          else
+            echo "Wiki not found — bootstrapping."
+            mkdir wiki && cd wiki
+            git init -b main
+            git remote add origin "$WIKI_URL"
+            # Will be populated in next step
           fi
+
+          cd wiki
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Copy reports and rebuild index
         run: |
           changed_files="${{ steps.changed.outputs.files }}"
-
           if [ -z "$changed_files" ]; then
             echo "No report files changed — skipping."
             exit 0
           fi
 
-          # Copy each changed report into wiki root
           for f in $changed_files; do
             [ -f "$f" ] || continue
-            basename=$(basename "$f")
-            cp "$f" "wiki/$basename"
-            echo "Copied $f → wiki/$basename"
+            cp "$f" "wiki/$(basename "$f")"
+            echo "Copied $f"
           done
 
-          # Rebuild Home.md index from all reports in wiki (sorted newest first)
+          # Rebuild Home.md index (newest first)
           cd wiki
           {
             echo "# 乳癌治療趨勢週報"
@@ -82,14 +85,16 @@ jobs:
           } > Home.md
 
       - name: Commit and push wiki
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          WIKI_URL="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.wiki.git"
           cd wiki
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
           git add -A
           if git diff --cached --quiet; then
             echo "Wiki already up-to-date."
           else
-            git commit -m "wiki: publish ${{ github.ref_name }} reports [skip ci]"
-            git push
+            git commit -m "wiki: $(date -u +%Y-%m-%d) — publish reports [skip ci]"
+            # Force push handles both fresh init and normal update
+            git push "$WIKI_URL" HEAD:main --force
           fi
