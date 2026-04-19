@@ -1,106 +1,164 @@
-# Breast cancer relevance keywords
+# ECG / Emergency Cardiology relevance keywords
 # Used by: webscraper (article filtering & tagging), fetcher (tweet classification)
 # Add / remove terms here to tune what gets captured.
+# Note: YAML key is kept as `breast_cancer_keywords` because src/config.py reads
+# that specific key. Rename would require a Python change.
 
 breast_cancer_keywords:
-  # Disease subtypes
-  - breast cancer
-  - breast carcinoma
-  - HER2
-  - HER2+
-  - HER2-low
-  - HER2-ultralow
-  - TNBC
-  - triple-negative
-  - ER+
-  - HR+
+  # Core ECG terms
+  - ECG
+  - EKG
+  - electrocardiogram
+  - electrocardiography
+  - 12-lead
+  - rhythm strip
+  - telemetry
 
-  # HER2-targeted agents
-  - trastuzumab
-  - pertuzumab
-  - T-DM1
-  - T-DXd
-  - Enhertu
-  - trastuzumab deruxtecan
-  - tucatinib
-  - Tukysa
-  - neratinib
-  - margetuximab
+  # STEMI / OMI family
+  - STEMI
+  - NSTEMI
+  - OMI
+  - NOMI
+  - occlusion MI
+  - occlusion myocardial infarction
+  - acute coronary
+  - Sgarbossa
+  - modified Sgarbossa
+  - Barcelona
+  - De Winter
+  - Wellens
+  - hyperacute T
+  - posterior MI
+  - inferior MI
+  - anterior MI
+  - lateral MI
+  - reciprocal changes
+  - ST elevation
+  - ST depression
+  - T wave inversion
 
-  # ADC
-  - sacituzumab
-  - Trodelvy
-  - datopotamab
-  - Datroway
-  - TROP2
-  - ADC
+  # Arrhythmias
+  - arrhythmia
+  - atrial fibrillation
+  - atrial flutter
+  - AFib
+  - AF
+  - SVT
+  - supraventricular tachycardia
+  - ventricular tachycardia
+  - VT
+  - VF
+  - ventricular fibrillation
+  - torsades
+  - torsades de pointes
+  - polymorphic VT
+  - premature ventricular
+  - PVC
+  - bradycardia
+  - tachycardia
+  - sinus pause
+  - sinus arrest
+  - electrical storm
+  - BRASH
+  - BRASH syndrome
 
-  # CDK4/6 inhibitors
-  - CDK4/6
-  - palbociclib
-  - Ibrance
-  - ribociclib
-  - Kisqali
-  - abemaciclib
-  - Verzenio
+  # Conduction / blocks
+  - AV block
+  - heart block
+  - first-degree AV
+  - second-degree AV
+  - Mobitz
+  - Wenckebach
+  - third-degree
+  - complete heart block
+  - bifascicular
+  - trifascicular
+  - LBBB
+  - RBBB
+  - left bundle branch block
+  - right bundle branch block
+  - hemiblock
+  - fascicular block
+  - intraventricular conduction delay
 
-  # PARP inhibitors
-  - PARP
-  - olaparib
-  - Lynparza
-  - talazoparib
-  - Talzenna
-  - BRCA
+  # Channelopathy / genetic
+  - Brugada
+  - WPW
+  - Wolff-Parkinson-White
+  - pre-excitation
+  - long QT
+  - LQTS
+  - short QT
+  - ARVC
+  - arrhythmogenic right ventricular
+  - CPVT
+  - channelopathy
+  - ion channel
+  - early repolarization
 
-  # Endocrine / SERD
-  - ESR1
-  - elacestrant
-  - Orserdu
-  - imlunestrant
-  - Inluriyo
-  - fulvestrant
-  - Faslodex
-  - tamoxifen
-  - aromatase inhibitor
-  - letrozole
-  - anastrozole
-  - exemestane
-  - endocrine
+  # Devices
+  - pacemaker
+  - ICD
+  - implantable cardioverter defibrillator
+  - CRT
+  - biventricular pacing
+  - leadless pacemaker
+  - loop recorder
+  - Holter
+  - event monitor
 
-  # PI3K/AKT/mTOR
-  - PI3K
-  - PIK3CA
-  - alpelisib
-  - Piqray
-  - capivasertib
-  - AKT
-  - mTOR
-  - everolimus
+  # Wearables / AI
+  - Apple Watch ECG
+  - Kardia
+  - AliveCor
+  - Withings ScanWatch
+  - Fitbit ECG
+  - smartwatch ECG
+  - single-lead ECG
+  - AI ECG
+  - AI-ECG
+  - deep learning ECG
+  - machine learning ECG
+  - PMcardio
+  - Queen of Hearts
+  - ECG interpretation AI
 
-  # Immunotherapy
-  - PD-L1
-  - PD-1
-  - pembrolizumab
-  - Keytruda
-  - atezolizumab
-  - immunotherapy
+  # Resuscitation / pearls
+  - cardiac arrest
+  - defibrillation
+  - cardioversion
+  - pulseless electrical activity
+  - PEA
+  - asystole
+  - ROSC
+  - post-arrest ECG
+  - pulseless VT
 
-  # Surgical / staging
-  - lumpectomy
-  - mastectomy
-  - neoadjuvant
-  - adjuvant
-  - mammogram
+  # Segments / intervals
+  - QT interval
+  - QTc
+  - QRS
+  - QRS complex
+  - P wave
+  - PR interval
+  - J wave
+  - Osborn wave
+  - epsilon wave
+  - delta wave
+  - U wave
 
-  # Trial names (key ones worth tagging)
-  - DESTINY-Breast
-  - ASCENT
-  - NATALEE
-  - monarchE
-  - MONALEESA
-  - MONARCH
-  - PALOMA
-  - OlympiA
-  - EMBER
-  - KEYNOTE-522
-  - KATHERINE
+  # Emergency cardiology context
+  - syncope
+  - palpitations
+  - chest pain
+  - HEART score
+  - troponin
+  - electrical alternans
+
+  # Teaching / FOAM
+  - FOAMed
+  - FOAMcc
+  - ECG pearl
+  - ECG case
+  - ECG teaching
+  - rhythm recognition

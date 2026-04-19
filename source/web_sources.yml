@@ -1,38 +1,115 @@
 # Web scraper source definitions
 # Used by: webscraper.py
-# Add new sources here without touching Python code.
+# Add new sources here without touching Python code (except adding a new `query`
+# field to Google News sources — requires the webscraper patch already applied).
 #
 # Two source types:
-#   type: rss        — fetch a direct RSS/Atom feed URL
-#   type: google_news — search Google News RSS for site:DOMAIN breast cancer
+#   type: rss         — fetch a direct RSS/Atom feed URL
+#   type: google_news — search Google News RSS for site:DOMAIN <query>
 #
 # Fields:
 #   name        display name in report
 #   type        rss | google_news
 #   url         (rss only) full RSS feed URL
 #   domain      (google_news only) site to search, e.g. onclive.com
+#   query       (google_news only, optional) search terms appended to site:DOMAIN
+#               default: "ECG OR EKG OR arrhythmia"
 #   max_items   max articles to retrieve
-#   bc_filter   (rss only) true = apply keyword filter; false = feed is already BC-specific
+#   bc_filter   (rss only) true = apply keyword filter; false = feed is already topic-specific
 #   noise_filter (google_news only) regex of title patterns to exclude as noise
 
 sources:
-  - name: OncDaily
+  # ── FOAM / EM-focused blogs (direct RSS) ──────────────────────────────────
+  # LITFL ECG library — reference posts, not weekly news.
+  # The main LITFL feed is broad FOAM and rarely has ECG content week-to-week;
+  # this category feed always returns high-quality ECG reference articles
+  # (De Winter, Osborn wave, Wellens, etc.) — use as teaching links in reports.
+  - name: LITFL ECG Library
     type: rss
-    url: "https://oncodaily.com/oncolibrary/breast-oncology/feed/"
+    url: "https://litfl.com/category/ecg-library/feed/"
+    max_items: 15
+    bc_filter: false   # feed is guaranteed ECG-specific
+
+  - name: Dr Smith ECG Blog
+    type: rss
+    # Migrated from hqmeded-ecg.blogspot.com in 2025-06. Old Blogger feed is
+    # a frozen snapshot with a meta-refresh redirect — don't use it.
+    url: "https://drsmithsecgblog.com/feed/"
     max_items: 20
-    bc_filter: false   # feed is already breast-oncology specific
+    bc_filter: false   # blog is already ECG-specific
 
-  - name: OncLive
-    type: google_news
-    domain: onclive.com
-    max_items: 30
-    noise_filter: null
+  - name: EMCrit
+    type: rss
+    url: "https://emcrit.org/feed/"
+    max_items: 20
+    bc_filter: true
 
-  - name: ESMO
+  - name: REBEL EM
+    type: rss
+    url: "https://rebelem.com/feed/"
+    max_items: 20
+    bc_filter: true
+
+  - name: First10EM
+    type: rss
+    url: "https://first10em.com/feed/"
+    max_items: 20
+    bc_filter: true
+
+  - name: ALiEM
+    type: rss
+    url: "https://www.aliem.com/feed/"
+    max_items: 20
+    bc_filter: true
+
+  # Core EM's WordPress /feed/ is stuck at 2024-10 (site-side cache bug — their
+  # homepage shows 2026-04 posts, but the RSS endpoint doesn't regenerate).
+  # Route via Google News instead.
+  - name: Core EM
     type: google_news
-    domain: esmo.org
-    max_items: 30
-    noise_filter: "terms|privacy|home|guidelines|about|welcome|calendar|industry|partners|registration|preceptorship|congress \\d{4}:"
+    domain: coreem.net
+    query: "ECG OR arrhythmia OR STEMI OR cardiac"
+    max_items: 20
+    noise_filter: "about|contact|faculty|podcast index"
+
+  # ── ECG Weekly (Amal Mattu) ───────────────────────────────────────────────
+  # Archive page is public — lists 20 most recent workouts with slug (title)
+  # and image upload path (YYYY/MM date). Video + written analysis are gated
+  # behind membership login; we capture only the metadata here and optionally
+  # deep-fetch full content in a separate pipeline (see ecgweekly_deep.py).
+  - name: ECG Weekly (Amal Mattu)
+    type: ecgweekly
+    url: "https://ecgweekly.com/weekly-workout/"
+    max_items: 20
+
+  # ── Society / news outlets via Google News ────────────────────────────────
+  - name: ACC
+    type: google_news
+    domain: acc.org
+    query: "ECG OR arrhythmia OR STEMI"
+    max_items: 25
+    noise_filter: "membership|about|contact|calendar|registration|quarterly"
+
+  - name: ESC
+    type: google_news
+    domain: escardio.org
+    query: "ECG OR arrhythmia OR electrophysiology"
+    max_items: 25
+    noise_filter: "membership|about|contact|calendar|registration|welcome"
+
+  - name: HRS
+    type: google_news
+    domain: hrsonline.org
+    query: "ECG OR arrhythmia OR ablation OR electrophysiology"
+    max_items: 20
+    noise_filter: "membership|about|contact|award|registration"
+
+  - name: AHA
+    type: google_news
+    domain: heart.org
+    query: "ECG OR arrhythmia OR sudden cardiac"
+    max_items: 20
+    noise_filter: "donate|volunteer|about|contact|store|membership"
 
 # HTTP headers used for all scraper requests
 http_headers:

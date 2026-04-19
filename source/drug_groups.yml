@@ -1,121 +1,151 @@
-# Drug / target group definitions for tweet and article classification
+# Topic group definitions for ECG article / tweet classification
 # Used by: reporter.py (trend aggregation)
 # Format: group_name: [keyword, ...]  (case-insensitive matching)
+# Note: YAML key is kept as `drug_groups` because src/config.py reads that key.
 
 drug_groups:
-  HER2-targeted:
-    - HER2
-    - trastuzumab
-    - pertuzumab
-    - T-DM1
-    - ado-trastuzumab
-    - T-DXd
-    - Enhertu
-    - trastuzumab deruxtecan
-    - tucatinib
-    - Tukysa
-    - lapatinib
-    - neratinib
-    - margetuximab
-    - DESTINY-Breast
+  OMI / STEMI diagnosis:
+    - STEMI
+    - NSTEMI
+    - OMI
+    - NOMI
+    - occlusion MI
+    - occlusion myocardial
+    - Sgarbossa
+    - modified Sgarbossa
+    - Barcelona
+    - De Winter
+    - Wellens
+    - hyperacute T
+    - posterior MI
+    - inferior MI
+    - anterior MI
+    - lateral MI
+    - ST elevation
+    - ST depression
+    - reciprocal changes
 
-  CDK4/6 inhibitors:
-    - CDK4/6
-    - CDK4
-    - CDK6
-    - palbociclib
-    - Ibrance
-    - ribociclib
-    - Kisqali
-    - abemaciclib
-    - Verzenio
-    - MONARCH
-    - MONALEESA
-    - PALOMA
-    - NATALEE
+  Atrial arrhythmia:
+    - atrial fibrillation
+    - AFib
+    - atrial flutter
+    - SVT
+    - supraventricular tachycardia
+    - AVNRT
+    - AVRT
+    - focal atrial tachycardia
 
-  PARP inhibitors:
-    - PARP
-    - olaparib
-    - Lynparza
-    - talazoparib
-    - Talzenna
-    - niraparib
-    - rucaparib
-    - BRCA
-    - OlympiA
+  Ventricular arrhythmia:
+    - ventricular tachycardia
+    - VT
+    - VF
+    - ventricular fibrillation
+    - torsades
+    - polymorphic VT
+    - premature ventricular
+    - PVC
+    - electrical storm
+    - pulseless VT
 
-  PI3K/AKT/mTOR:
-    - PI3K
-    - alpelisib
-    - Piqray
-    - AKT
-    - capivasertib
-    - mTOR
-    - everolimus
-    - Afinitor
-    - PIK3CA
+  Conduction blocks:
+    - AV block
+    - heart block
+    - Mobitz
+    - Wenckebach
+    - complete heart block
+    - bifascicular
+    - trifascicular
+    - LBBB
+    - RBBB
+    - left bundle branch
+    - right bundle branch
+    - hemiblock
+    - fascicular block
 
-  Immunotherapy:
-    - immunotherapy
-    - checkpoint
-    - PD-1
-    - PD-L1
-    - pembrolizumab
-    - Keytruda
-    - atezolizumab
-    - Tecentriq
-    - TIL
-    - tumor infiltrating lymphocyte
-    - KEYNOTE-522
+  Channelopathy / genetic:
+    - Brugada
+    - WPW
+    - Wolff-Parkinson-White
+    - pre-excitation
+    - long QT
+    - LQTS
+    - short QT
+    - ARVC
+    - arrhythmogenic right ventricular
+    - CPVT
+    - early repolarization
+    - channelopathy
 
-  ADC:
-    - ADC
-    - antibody-drug conjugate
-    - sacituzumab
-    - Trodelvy
-    - datopotamab
-    - Datroway
-    - datopot
-    - TROP2
-    - ASCENT
+  Devices:
+    - pacemaker
+    - ICD
+    - implantable cardioverter defibrillator
+    - CRT
+    - biventricular pacing
+    - leadless pacemaker
+    - loop recorder
+    - Holter
+    - event monitor
 
-  Endocrine therapy:
-    - endocrine
-    - tamoxifen
-    - aromatase
-    - letrozole
-    - anastrozole
-    - exemestane
-    - fulvestrant
-    - Faslodex
-    - elacestrant
-    - Orserdu
-    - imlunestrant
-    - Inluriyo
-    - ESR1
-    - SERD
-    - EMBER
+  Wearables:
+    - Apple Watch
+    - Kardia
+    - AliveCor
+    - Withings
+    - Fitbit
+    - smartwatch ECG
+    - single-lead ECG
 
-  TNBC:
-    - TNBC
-    - triple negative
-    - triple-negative
-    - capecitabine
-    - carboplatin
-    - nab-paclitaxel
-    - Abraxane
+  AI ECG:
+    - AI ECG
+    - AI-ECG
+    - deep learning ECG
+    - machine learning ECG
+    - PMcardio
+    - Queen of Hearts
+    - ECG interpretation AI
+    - algorithm ECG
 
-# Conference / event keywords (used for flagging conference tweets)
+  Resuscitation rhythm:
+    - cardiac arrest
+    - defibrillation
+    - cardioversion
+    - pulseless electrical activity
+    - PEA
+    - asystole
+    - ROSC
+    - post-arrest ECG
+
+  BRASH / tox / emergency:
+    - BRASH
+    - BRASH syndrome
+    - hyperkalemia
+    - digoxin toxicity
+    - sodium channel blockade
+    - tricyclic
+    - hypothermia
+    - Osborn wave
+
+# Conference / event keywords (used for flagging conference content)
 conference_keywords:
-  - ASCO
-  - SABCS
-  - ESMO
-  - AACR
-  - ASH
+  - HRS
+  - ESC
+  - ACC
+  - AHA
+  - EHRA
+  - ACEP
+  - SAEM
+  - EuroPCR
+  - SCAI
   - abstract
   - conference
   - congress
-  - "#ASCO"
-  - "#SABCS"
-  - "#ESMO"
+  - "#HRS"
+  - "#ESC"
+  - "#ACC"
+  - "#AHA"
+  - "#EHRA"
+  - "#ACEP"
+  - "#FOAMed"
+  - "#ECG"
+  - "#EKG"

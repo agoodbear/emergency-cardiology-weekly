@@ -72,9 +72,9 @@ jobs:
 
           # Rebuild Home.md index (newest first)
           {
-            echo "# 乳癌治療趨勢週報"
+            echo "# ECG / 急診心臟學週報"
             echo ""
-            echo "> 每週自動生成 · 資料來源：OpenEvidence、OncDaily、OncLive、ESMO、ClinicalTrials.gov"
+            echo "> 每週自動生成 · 資料來源：Dr Smith ECG Blog、ECG Weekly (Amal Mattu)、LITFL、EMCrit、REBEL EM、ACC、ESC、HRS、CrossRef (Heart Rhythm / JACC-EP / J Electrocardiology / Resuscitation)"
             echo ""
             echo "| 週次 | 連結 |"
             echo "|------|------|"

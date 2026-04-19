@@ -110,10 +110,10 @@ def cmd_accounts():
 
 def cmd_scrape(days: int = 7):
     import asyncio, json
-    console.print("\n[bold]Scraping OncDaily & OncLive...[/bold]")
+    console.print("\n[bold]Scraping ECG / EM sources...[/bold]")
     results = asyncio.run(webscraper.fetch_all(days=days))
     for source, articles in results.items():
-        console.print(f"  [cyan]{source}[/cyan]: {len(articles)} breast cancer articles found")
+        console.print(f"  [cyan]{source}[/cyan]: {len(articles)} ECG-relevant articles found")
         for a in articles[:5]:
             console.print(f"    • {a.title[:80]}")
             if a.url:
@@ -138,7 +138,7 @@ def cmd_journals():
     console.print("\n[bold]Fetching journal articles via CrossRef...[/bold]")
     results = asyncio.run(crossref_fetcher.fetch_all())
     for journal, articles in results.items():
-        console.print(f"  [cyan]{journal}[/cyan]: {len(articles)} BC articles")
+        console.print(f"  [cyan]{journal}[/cyan]: {len(articles)} ECG articles")
         for a in articles[:4]:
             has_abs = "✓" if a.abstract_digest else "—"
             console.print(f"    [{has_abs}] {a.title[:75]}")

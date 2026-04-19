@@ -1,10 +1,11 @@
-"""Fetch recent journal articles from CrossRef API and pre-screen for oncology relevance."""
+"""Fetch recent journal articles from CrossRef API and pre-screen for ECG relevance."""
 
 import asyncio
 import re
 import yaml
 from dataclasses import dataclass, field
 from datetime import date, timedelta
+from functools import lru_cache
 from pathlib import Path
 from typing import Optional
 
@@ -16,20 +17,45 @@ SOURCE_DIR = Path(__file__).parent.parent / "source"
 JATS_TAG = re.compile(r"<[^>]+>")
 
 # Pre-screen: two-tier filter.
-# Tier 1 — unambiguous BC terms: pass immediately.
-# Tier 2 — shared biomarkers (also used in gastric/lung/etc): only pass when
-#           a Tier-1 term is also present. This blocks gastroesophageal/lung
-#           articles that mention HER2/trastuzumab/T-DXd without "breast".
+# Tier 1 — unambiguous ECG / arrhythmia terms: pass immediately.
+# Tier 2 — shared cardiology terms (cardiomyopathy, heart failure, ischemia):
+#           documented here but not used by _passes_prescreen, so non-ECG
+#           cardiology articles (e.g. pure HF trials, valve surgery) are
+#           filtered out unless their title/abstract also contains a Tier-1 term.
 _BC_DIRECT = [
-    "breast", "mammary", "TNBC", "ESR1",
-    "ribociclib", "palbociclib", "abemaciclib",   # CDK4/6 — primarily BC
-    "imlunestrant", "elacestrant",                 # SERD — BC-only
-    "DESTINY-Breast", "NATALEE", "monarchE",       # BC trial names
+    # Core ECG
+    "ECG", "EKG", "electrocardiogram", "electrocardiograph", "12-lead",
+    "QT interval", "QTc", "QRS", "P wave", "PR interval",
+    # Arrhythmia
+    "arrhythmia", "atrial fibrillation", "atrial flutter", "AFib",
+    "ventricular tachycardia", "ventricular fibrillation", "SVT", "VT", "VF",
+    "torsades", "premature ventricular", "PVC", "electrical storm",
+    # Conduction
+    "AV block", "heart block", "Mobitz", "Wenckebach", "bifascicular",
+    "LBBB", "RBBB", "bundle branch block", "fascicular",
+    # Channelopathy
+    "Brugada", "Wolff-Parkinson-White", "WPW", "long QT", "LQTS",
+    "ARVC", "CPVT", "early repolarization",
+    # ACS / OMI
+    "STEMI", "NSTEMI", "OMI", "occlusion myocardial", "Sgarbossa",
+    "Wellens", "De Winter", "hyperacute T",
+    # Devices
+    "pacemaker", "implantable cardioverter", "ICD", "biventricular pacing",
+    "leadless pacemaker", "loop recorder", "Holter",
+    # AI / wearable
+    "AI-ECG", "deep learning ECG", "Apple Watch ECG", "Kardia", "AliveCor",
+    "PMcardio",
+    # Resuscitation rhythms
+    "cardiac arrest", "defibrillation", "cardioversion",
+    "pulseless electrical activity", "asystole", "ROSC",
+    # Emergency pearls
+    "BRASH", "syncope", "palpitations",
 ]
 _SHARED_TERMS = [
-    "HER2", "trastuzumab", "pertuzumab", "T-DXd", "Enhertu",
-    "sacituzumab", "olaparib", "talazoparib", "fulvestrant",
-    "CDK4", "CDK6", "ASCENT",
+    "cardiomyopathy", "heart failure", "HFrEF", "HFpEF",
+    "myocardial", "ischemia", "ischaemic",
+    "ventricle", "ventricular", "atrial",
+    "ablation", "electrophysiology",
 ]
 
 
@@ -83,17 +109,39 @@ def _digest_abstract(abstract: str, max_chars: int = 400) -> str:
     return " ".join(parts).strip() if parts else abstract[:max_chars]
 
 
+@lru_cache(maxsize=1)
+def _keyword_regex() -> re.Pattern:
+    kws = sorted(config.keywords(), key=len, reverse=True)
+    pattern = r"\b(?:" + "|".join(re.escape(kw) for kw in kws) + r")\b"
+    return re.compile(pattern, re.IGNORECASE)
+
+
+@lru_cache(maxsize=1)
+def _keyword_canonical_map() -> dict[str, str]:
+    return {k.lower(): k for k in config.keywords()}
+
+
+@lru_cache(maxsize=1)
+def _direct_regex() -> re.Pattern:
+    terms = sorted(_BC_DIRECT, key=len, reverse=True)
+    pattern = r"\b(?:" + "|".join(re.escape(t) for t in terms) + r")\b"
+    return re.compile(pattern, re.IGNORECASE)
+
+
 def _extract_tags(text: str) -> list[str]:
-    tl = text.lower()
-    return list(dict.fromkeys(k for k in config.keywords() if k.lower() in tl))
+    canon = _keyword_canonical_map()
+    seen, ordered = set(), []
+    for m in _keyword_regex().findall(text):
+        key = m.lower()
+        if key not in seen and key in canon:
+            seen.add(key)
+            ordered.append(canon[key])
+    return ordered
 
 
 def _passes_prescreen(text: str) -> bool:
-    tl = text.lower()
-    if any(t.lower() in tl for t in _BC_DIRECT):
-        return True
-    # Shared biomarkers only count when a direct BC term is also present
-    return False
+    # Word-boundary match: "AF" won't match "after", "OMI" won't match "medetomidine".
+    return bool(_direct_regex().search(text))
 
 
 def _pub_date(item: dict) -> Optional[str]:
@@ -137,7 +185,7 @@ async def _fetch_journal(
         r = await client.get(
             "https://api.crossref.org/works",
             params=params,
-            headers={"User-Agent": f"breast-cancer-uptodate/1.0 (mailto:{email})"},
+            headers={"User-Agent": f"ecg-weekly/1.0 (mailto:{email})"},
             timeout=25,
         )
         r.raise_for_status()

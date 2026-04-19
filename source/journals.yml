@@ -9,60 +9,98 @@
 #   issn         print or electronic ISSN (CrossRef accepts either)
 #   days_back    how many days of articles to fetch (default: 14)
 #   max_items    max articles to retrieve per run (default: 30)
-#   bc_filter    filter to breast-cancer-relevant articles only (default: true)
+#   bc_filter    filter to ECG-relevant articles only (default: true)
+#                (kept name for backwards compat — see crossref_fetcher._passes_prescreen)
 #
 # CrossRef API is free, no key required.
 # Polite pool: include a mailto in User-Agent (set in crossref_fetcher.py).
 
-crossref_email: "ppoiu87@gmail.com"   # used in User-Agent for CrossRef polite pool
+crossref_email: "agoodbear@gmail.com"
 
 journals:
-  - name: JCO
-    full_name: "Journal of Clinical Oncology"
-    issn: "0732-183X"
+  # ── Electrophysiology-focused journals (high signal-to-noise for ECG) ────
+  - name: Heart Rhythm
+    full_name: "Heart Rhythm"
+    issn: "1547-5271"
     days_back: 14
     max_items: 30
     bc_filter: true
 
-  # Uncomment to activate — no code changes needed
-  # - name: NEJM
-  #   full_name: "New England Journal of Medicine"
-  #   issn: "0028-4793"
+  - name: JACC-EP
+    full_name: "JACC: Clinical Electrophysiology"
+    issn: "2405-500X"
+    days_back: 14
+    max_items: 25
+    bc_filter: true
+
+  - name: Circulation-AE
+    full_name: "Circulation: Arrhythmia and Electrophysiology"
+    issn: "1941-3149"
+    days_back: 14
+    max_items: 25
+    bc_filter: true
+
+  - name: J Electrocardiology
+    full_name: "Journal of Electrocardiology"
+    issn: "0022-0736"
+    days_back: 21
+    max_items: 25
+    bc_filter: false   # already ECG-specific by definition
+
+  # ── Emergency medicine (cardiac-relevant subset) ─────────────────────────
+  - name: Annals EM
+    full_name: "Annals of Emergency Medicine"
+    issn: "0196-0644"
+    days_back: 14
+    max_items: 30
+    bc_filter: true
+
+  - name: Resuscitation
+    full_name: "Resuscitation"
+    issn: "0300-9572"
+    days_back: 14
+    max_items: 25
+    bc_filter: true
+
+  # ── Uncomment to activate broader cardiology journals ────────────────────
+  # - name: Circulation
+  #   full_name: "Circulation"
+  #   issn: "0009-7322"
   #   days_back: 14
-  #   max_items: 20
+  #   max_items: 30
   #   bc_filter: true
 
-  # - name: Lancet Oncology
-  #   full_name: "The Lancet Oncology"
-  #   issn: "1470-2045"
+  # - name: JACC
+  #   full_name: "Journal of the American College of Cardiology"
+  #   issn: "0735-1097"
+  #   days_back: 14
+  #   max_items: 30
+  #   bc_filter: true
+
+  # - name: Europace
+  #   full_name: "Europace"
+  #   issn: "1099-5129"
   #   days_back: 14
   #   max_items: 25
   #   bc_filter: true
 
-  # - name: JAMA Oncology
-  #   full_name: "JAMA Oncology"
-  #   issn: "2374-2437"
+  # - name: European Heart J
+  #   full_name: "European Heart Journal"
+  #   issn: "0195-668X"
   #   days_back: 14
-  #   max_items: 20
+  #   max_items: 30
   #   bc_filter: true
 
-  # - name: Annals of Oncology
-  #   full_name: "Annals of Oncology"
-  #   issn: "0923-7534"
-  #   days_back: 14
-  #   max_items: 20
-  #   bc_filter: true
-
-  # - name: Blood          # hematology
-  #   full_name: "Blood"
-  #   issn: "0006-4971"
+  # - name: JAMA Cardiology
+  #   full_name: "JAMA Cardiology"
+  #   issn: "2380-6583"
   #   days_back: 14
   #   max_items: 25
   #   bc_filter: true
 
-  # - name: JCO Oncology Practice
-  #   full_name: "JCO Oncology Practice"
-  #   issn: "2688-1527"
+  # - name: JEM
+  #   full_name: "Journal of Emergency Medicine"
+  #   issn: "0736-4679"
   #   days_back: 14
-  #   max_items: 15
+  #   max_items: 25
   #   bc_filter: true

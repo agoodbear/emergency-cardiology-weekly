@@ -1,14 +1,26 @@
-# Breast cancer KOL seed accounts
+# ECG / Emergency Cardiology KOL seed accounts
 # Format: one Twitter handle per line (no @)
-tatianapro
-DrAttai
-NancyLinCC
-Hope_Rugo
-DrEricaMayer
-OncoAlert
-DrJoyceOConnell
-drsusanlovemd
-BCRFcure
-palbociclib
-VKMouret
-Mark_Pegram
+# Picked conservatively to include only well-established EM/cardiology educators.
+
+# OMI / ECG teaching
+smithECGBlog
+amalmattu
+EMSwami
+hqmeded
+
+# EM / critical care with cardiac content
+EMCrit
+First10EM
+srrezaie
+PulmCrit
+emupdates
+ALiEMteam
+
+# Societies / official channels
+HRSonline
+escardio
+ACCinTouch
+ACEPNow
+
+# AI ECG / tooling
+PMcardio
