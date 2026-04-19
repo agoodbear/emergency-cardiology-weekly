@@ -1,10 +1,8 @@
 # ECG / Emergency Cardiology relevance keywords
 # Used by: webscraper (article filtering & tagging), fetcher (tweet classification)
 # Add / remove terms here to tune what gets captured.
-# Note: YAML key is kept as `breast_cancer_keywords` because src/config.py reads
-# that specific key. Rename would require a Python change.
 
-breast_cancer_keywords:
+topic_keywords:
   # Core ECG terms
   - ECG
   - EKG

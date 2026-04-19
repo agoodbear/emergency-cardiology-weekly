@@ -1,32 +1,45 @@
-# Oncology Weekly Trend Reporter
+# 急診心臟學週報（Emergency Cardiology Weekly）
 
-自動生成腫瘤科每週治療趨勢報告，以繁體中文撰寫（英文醫學名詞不翻譯）。
+自動生成急診 ECG / 心臟學每週趨勢報告，以繁體中文撰寫（英文醫學名詞保留原文）。
 
-目前設定：**乳癌（Breast Cancer）**
+目前主題：**急診 ECG / 心臟學**（OMI/STEMI、arrhythmia、conduction、channelopathy、裝置與 ablation、AI ECG、穿戴裝置、resuscitation）
 
-資料來源：OpenEvidence AI · OncDaily RSS · OncLive · ESMO · ClinicalTrials.gov
+資料來源：
+- **教學 blog**：Dr Smith ECG Blog、ECG Weekly (Amal Mattu)、LITFL ECG Library、EMCrit、REBEL EM、First10EM、ALiEM、Core EM
+- **學會 / 官方**：ACC、ESC、HRS、AHA（via Google News）
+- **期刊**：Heart Rhythm、JACC-EP、Circulation-AE、Journal of Electrocardiology、Annals of Emergency Medicine、Resuscitation（via CrossRef API）
+- **Twitter KOL**（選用）：smithECGBlog、amalmattu、EMSwami、EMCrit、srrezaie、HRSonline、escardio...
 
-週報範例：[2026-W16](https://github.com/htlin222/breast-cancer-uptodate/wiki/2026-W16)
+週報風格：**醫學雜誌 editorial**——每章導言 → 3-4 重點 → Bottom line，3 分鐘讀完。
+
+最新週報範例：[2026-W16](https://github.com/agoodbear/emergency-cardiology-weekly/blob/main/reports/2026-W16.md)
 
 ---
 
 ## 快速開始
 
 ```bash
-# 安裝 uv（Python 套件管理）
+# 1. 安裝 uv（Python 套件管理）
 curl -LsSf https://astral.sh/uv/install.sh | sh
+# 或： brew install uv
 
-# 安裝相依套件
+# 2. 安裝相依套件
 uv sync
 
-# 執行爬蟲 + 報告（OncDaily / OncLive / ESMO）
+# 3. 執行爬蟲（11 個 web sources）
 uv run python main.py scrape
 
-# 生成報告（需手動補充 OpenEvidence 段落，或直接在 Claude Code 中執行）
-uv run python main.py report
+# 4. 執行期刊抓取（CrossRef 6 本期刊）
+uv run python main.py journals
+
+# 5. 檢視結果
+cat data/webscrape_cache.json | python3 -m json.tool | less
+cat data/journals_cache.json | python3 -m json.tool | less
 ```
 
-報告輸出至 `reports/YYYY-Wxx.md`，push 到 `main` 後 GitHub Actions 自動發布至 Wiki。
+週報本身由 Claude Code 在 session 中讀 cache 後手寫產出（見 `CLAUDE.md`）——Python 負責抓料，Claude 負責策展與敘事。
+
+Push `reports/YYYY-WNN.md` 到 `main` 後，GitHub Action 自動發佈到 Wiki。
 
 ---
 
@@ -34,169 +47,47 @@ uv run python main.py report
 
 ```
 .
-├── source/                   ← 所有可調整參數（不需改 Python）
-│   ├── keywords.yml          ← 疾病相關關鍵詞（過濾用）
-│   ├── drug_groups.yml       ← 藥物分組 + 會議關鍵詞
+├── source/                   ← 所有主題相關參數（不需改 Python）
+│   ├── keywords.yml          ← ECG / 心臟學關鍵詞（過濾與 tag 用）
+│   ├── drug_groups.yml       ← 主題分組（OMI、arrhythmia、conduction...）
 │   ├── search_queries.yml    ← Twitter 搜尋 query
-│   ├── web_sources.yml       ← 爬蟲來源（RSS URL、Google News site）
-│   └── twitter.yml           ← GraphQL op_id、cookie skip 清單
+│   ├── web_sources.yml       ← 爬蟲來源（RSS / Google News / ECG Weekly）
+│   ├── journals.yml          ← CrossRef 期刊 ISSN 清單
+│   └── twitter.yml           ← Twitter GraphQL op_id、cookie skip
 ├── config/
-│   └── seeds.txt             ← KOL Twitter 帳號種子清單
+│   └── seeds.txt             ← KOL Twitter 帳號種子
 ├── src/
-│   ├── config.py             ← YAML 載入器（lru_cache）
-│   ├── webscraper.py         ← 網路爬蟲（driven by web_sources.yml）
-│   ├── fetcher.py            ← Twitter 爬蟲（driven by twitter.yml）
-│   ├── reporter.py           ← 推文聚合報告生成
-│   ├── discover.py           ← KOL 自動發掘
+│   ├── config.py             ← YAML 載入器
+│   ├── webscraper.py         ← RSS / Google News / ECG Weekly 爬蟲
+│   ├── crossref_fetcher.py   ← CrossRef 期刊 API
+│   ├── fetcher.py            ← Twitter 爬蟲（選用）
+│   ├── reporter.py           ← Twitter 聚合報告（選用）
+│   ├── discover.py           ← KOL 自動發掘（選用）
 │   └── db.py                 ← SQLite 儲存
 ├── reports/                  ← 產出的週報（push 即觸發 wiki 發布）
+│   └── _archive/             ← 歷史資料（不進 wiki）
+├── CLAUDE.md                 ← Claude Code 寫報告的 SOP
 ├── main.py                   ← CLI 入口
 └── .github/workflows/
-    └── publish-wiki.yml      ← 自動發布 wiki 的 GitHub Action
+    └── publish-wiki.yml      ← 自動發佈 wiki 的 GitHub Action
 ```
 
 ---
 
-## 切換到其他癌症 / 血液腫瘤
+## 如何切換至其他主題
 
-本系統設計為**癌症無關（cancer-agnostic）**，所有領域知識都集中在 `source/` 下的 YAML 檔案，切換癌種只需修改這五個檔案，**不需動任何 Python 程式碼**。
+本系統沿用 upstream 的 **topic-agnostic** 架構——所有領域知識都集中在 `source/*.yml` 和 `config/seeds.txt`，切換主題只需改這六個檔案，**不需動 Python**。
 
-### 步驟 1 — 替換 `source/keywords.yml`
+若要從 ECG 切到其他主題（例如中風、糖尿病、急性呼吸衰竭）：
 
-```yaml
-# 以瀰漫性大 B 細胞淋巴瘤（DLBCL）為例
-breast_cancer_keywords:       # ← 改這個 key 的值（key 名稱不重要）
-  - DLBCL
-  - diffuse large B-cell lymphoma
-  - rituximab
-  - R-CHOP
-  - polatuzumab vedotin
-  - Polivy
-  - CAR-T
-  - axicabtagene
-  - lisocabtagene
-  - loncastuximab
-  - tafasitamab
-  - Monjuvi
-  - bispecific
-  - epcoritamab
-  - glofitamab
-  - BCL2
-  - venetoclax
-  - PI3K delta
-  - CD19
-  - CD20
-  - POLARIX
-  - L-MIND
-```
+1. **`source/keywords.yml`**：改成新主題關鍵詞（YAML 根 key 是 `topic_keywords`，列你主題的關鍵字即可）
+2. **`source/drug_groups.yml`**：重寫主題分組 + `conference_keywords`
+3. **`source/search_queries.yml`**：改 Twitter 搜尋 query
+4. **`source/web_sources.yml`**：改 RSS / Google News 來源；Google News 可用 `query:` 欄位覆蓋預設搜尋字串
+5. **`source/journals.yml`**：改 CrossRef ISSN 清單（`bc_filter` 欄位名保留）
+6. **`config/seeds.txt`**：改 KOL Twitter handle
 
-### 步驟 2 — 替換 `source/drug_groups.yml`
-
-依新癌種重寫藥物分組：
-
-```yaml
-drug_groups:
-  Anti-CD20:
-    - rituximab
-    - obinutuzumab
-    - Gazyva
-  CAR-T:
-    - axicabtagene
-    - lisocabtagene
-    - axi-cel
-    - liso-cel
-    - ZUMA
-    - TRANSFORM
-  Bispecific antibodies:
-    - epcoritamab
-    - glofitamab
-    - mosunetuzumab
-  BCL2 inhibitors:
-    - venetoclax
-    - Venclyxto
-
-conference_keywords:
-  - ASH
-  - ASCO
-  - EHA
-  - ICML
-  - abstract
-  - "#ASH"
-  - "#EHA"
-```
-
-### 步驟 3 — 替換 `source/search_queries.yml`
-
-```yaml
-search_queries:
-  - "(DLBCL OR diffuse large B-cell) (R-CHOP OR polatuzumab OR CAR-T)"
-  - "(DLBCL) (CAR-T OR axicabtagene OR lisocabtagene OR ZUMA OR TRANSFORM)"
-  - "(lymphoma) (bispecific OR epcoritamab OR glofitamab OR mosunetuzumab)"
-  - "(DLBCL OR lymphoma) (FDA OR approval OR OS OR PFS OR abstract)"
-  - "(diffuse large B cell lymphoma) lang:en"
-```
-
-### 步驟 4 — 替換 `source/web_sources.yml`（選擇性）
-
-大部分來源（OncLive、ESMO）本身就涵蓋血液腫瘤，只需調整 Google News 搜尋字串：
-
-```yaml
-sources:
-  - name: OncDaily
-    type: rss
-    url: "https://oncodaily.com/oncolibrary/hematology/feed/"   # ← 改路徑
-    max_items: 20
-    bc_filter: false
-
-  - name: OncLive
-    type: google_news
-    domain: onclive.com
-    max_items: 30
-    noise_filter: null
-    # Google News query 自動為 "site:onclive.com breast cancer"
-    # 改為 DLBCL 需修改 webscraper.py 中的 q= 字串
-    # 或在 web_sources.yml 加 query 欄位（見下方進階說明）
-
-  - name: ASH News
-    type: google_news
-    domain: hematology.org
-    max_items: 20
-    noise_filter: "membership|about|contact|award|meeting registration"
-```
-
-#### 進階：自訂 Google News 查詢字串
-
-在 `web_sources.yml` 加 `query` 欄位，`webscraper.py` 會優先使用：
-
-```yaml
-  - name: OncLive
-    type: google_news
-    domain: onclive.com
-    query: "DLBCL OR lymphoma"    # ← 覆蓋預設的 "breast cancer"
-    max_items: 30
-```
-
-並在 `src/webscraper.py` 的 `_fetch_google_news` 函式中讀取：
-
-```python
-query_term = src.get("query", "breast cancer")  # 一行改動
-q = f"site:{domain} {query_term}"
-```
-
-### 步驟 5 — 替換 `config/seeds.txt`
-
-```
-# DLBCL / Hematology KOLs
-JasonHAlderma    # Jason Westin, MD Anderson
-LorenzoCerchiett # Lorenz Cerchione
-seemaasst        # Seema Ansari
-lymphomainfo     # Lymphoma Research Foundation
-ASHhematology    # American Society of Hematology
-```
-
-### 步驟 6 — 改報告標題（選擇性）
-
-`main.py` 的 `cmd_scrape` 與 `src/reporter.py` 中的標題字串可直接改。
+若新主題需要客製爬蟲（像本專案的 `ECG Weekly` preview fetcher），在 `web_sources.yml` 加新 `type:`，在 `src/webscraper.py` 對應加新 fetcher function。
 
 ---
 
@@ -204,23 +95,51 @@ ASHhematology    # American Society of Hematology
 
 | 問題 | 解法 |
 |------|------|
-| Twitter API 回 404 | 更新 `source/twitter.yml` 的 `op_id` |
-| 某新藥沒被捕捉 | 加進 `source/keywords.yml` 和對應 `drug_groups.yml` |
-| 新增爬蟲來源 | 在 `source/web_sources.yml` 加一筆 `type: rss` 或 `type: google_news` |
-| 查詢字串太雜 | 修改 `source/search_queries.yml` |
-| Wiki 沒更新 | 確認 push 路徑含 `reports/*.md`；或手動跑 Actions → `workflow_dispatch` |
+| 某個 RSS 突然沒抓到新文章 | 檢查來源首頁 HTML 有沒有 `canonical` 或 `meta refresh`，可能已搬家（Dr Smith 就遇過這狀況） |
+| 關鍵字 substring 誤中（如 AF 匹配 after）| 確認 `webscraper.py` / `crossref_fetcher.py` 的 word-boundary regex 還在作用 |
+| Twitter API 回 404 | 更新 `source/twitter.yml` 的 `op_id`（抓 x.com main.*.js 裡的 SearchTimeline operation ID） |
+| 某主題關鍵字沒被捕捉 | 加進 `keywords.yml` 和對應 `drug_groups.yml` |
+| 新增爬蟲來源 | 在 `web_sources.yml` 加一筆 `type: rss` 或 `type: google_news` |
+| Wiki 沒更新 | 確認 push 包含 `reports/*.md`；或手動跑 Actions → Workflow dispatch |
 
 ---
 
-## GitHub Actions — Wiki 自動發布
+## GitHub Actions — Wiki 自動發佈
 
 每次 push 包含 `reports/*.md` 的 commit 到 `main`，`.github/workflows/publish-wiki.yml` 自動：
 
 1. 把新報告複製到 wiki repo
 2. 重建 `Home.md` 索引（最新在前）
-3. Force-push 到 wiki `master` branch
+3. Push 到 wiki `master` branch
+
+**首次使用需要手動初始化 wiki**：前往 [wiki 頁面](https://github.com/agoodbear/emergency-cardiology-weekly/wiki) 點 **Create the first page** 隨意存一頁，之後 workflow 就能自動發佈。
 
 手動觸發：Actions → **Publish Reports to Wiki** → **Run workflow**
+
+---
+
+## 發佈管線（Phase 2 規劃）
+
+目前 Wiki 是過渡方案。Phase 2 將把內容發佈管線改為：
+
+1. **主站**：獨立 Hugo 站「急診週報」（視覺設計走 Claude Design → Claude Code 實作）
+2. **個人知識庫**：Roam daily note 加 `[[急診週報]]` tag
+3. **推播**：Discord thread 貼週報標題 + 連結
+4. **備份**：GitHub repo 的 `reports/*.md`
+
+---
+
+## 致謝
+
+本專案 fork 自 [htlin222/breast-cancer-uptodate](https://github.com/htlin222/breast-cancer-uptodate)——感謝 [@htlin222](https://github.com/htlin222)（林煌騰醫師）建立 topic-agnostic 的週報生成架構。他設計了所有領域知識都集中在 YAML 的優雅分離方式，讓「換主題不用改程式」成為現實，本專案從 breast cancer oncology 切到 emergency cardiology 只改了六個 YAML 加兩處 Python patch。
+
+---
+
+## 作者
+
+**曹建雄** — 宜蘭陽明交通大學附設醫院 急診科主治醫師
+- 個人網站：[agoodbear.github.io](https://agoodbear.github.io/)
+- GitHub：[@agoodbear](https://github.com/agoodbear)
 
 ---
 
