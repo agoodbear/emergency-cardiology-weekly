@@ -72,22 +72,19 @@ week: "YYYY-WNN"
 weekRange: "YYYY-MM-DD — YYYY-MM-DD"
 date: YYYY-MM-DDT20:00:00+08:00    # 固定 20:00（防 Hugo future-date skip）
 readingTime: "21 分鐘"
-tags: ["OMI", "AI ECG", "裝置", "Arrhythmia", "Resus"]
+tags: ["OMI", "電生理", "AI ECG", "Resus"]
 sections:
   - { id: "tldr", num: "0",    title: "摘要" }
   - { id: "omi",  num: "I",    title: "OMI / 急性冠症" }
-  - { id: "arr",  num: "II",   title: "Arrhythmia / 節律" }
-  - { id: "con",  num: "III",  title: "Conduction / 傳導" }
-  - { id: "dev",  num: "IV",   title: "裝置" }
-  - { id: "ai",   num: "V",    title: "AI ECG / 穿戴" }
-  - { id: "res",  num: "VI",   title: "Resus / 急救" }
-  - { id: "tox",  num: "VII",  title: "BRASH / 毒物" }
-  - { id: "tch",  num: "VIII", title: "教學案例" }
-  - { id: "aut",  num: "IX",   title: "追蹤作者本週新作" }
-  - { id: "med",  num: "X",    title: "媒體動態" }
-  - { id: "ref",  num: "XI",   title: "文獻速報" }
-  - { id: "tw",   num: "XII",  title: "台灣急診備註" }
-  - { id: "key",  num: "XIII", title: "Key Takeaways" }
+  - { id: "arr",  num: "II",   title: "節律與電生理" }    # 含節律 / 傳導 / 通道病 / 裝置 / 消融
+  - { id: "ai",   num: "III",  title: "AI ECG / 穿戴" }
+  - { id: "res",  num: "IV",   title: "Resus / 急救" }
+  - { id: "tch",  num: "V",    title: "教學案例" }
+  - { id: "aut",  num: "VI",   title: "追蹤作者本週新作" }
+  - { id: "med",  num: "VII",  title: "媒體動態" }
+  - { id: "ref",  num: "VIII", title: "文獻速報" }
+  - { id: "tw",   num: "IX",   title: "台灣急診備註" }
+  - { id: "key",  num: "X",    title: "Key Takeaways" }
 ---
 ```
 
@@ -95,26 +92,32 @@ sections:
 
 ---
 
-## 13 章節結構（H2 必加 anchor `{#id}`）
+## 10 章節結構（H2 必加 anchor `{#id}`）
 
 ```markdown
 ## 摘要 / 本週速讀 {#tldr}
 （**本週 5 大訊號** — 導言 + 第一/二/三 共 4 段 + bullet 清單，每個 bullet 一條訊號）
 
-## 一、OMI / STEMI 判讀 {#omi}
-## 二、Arrhythmia 心律不整新知 {#arr}
-## 三、Conduction 傳導異常與 Channelopathy {#con}
-## 四、Pacemaker / ICD / CRT 與 Ablation {#dev}
-## 五、AI ECG 與穿戴裝置 {#ai}
-## 六、Cardiac Arrest / Resuscitation {#res}
-## 七、BRASH / 急診 ECG 毒物相關 {#tox}
-## 八、教學案例精選 {#tch}
-## 九、追蹤作者本週新作（PubMed）{#aut}      # L2 章節，本期 7 位作者整理
-## 十、媒體動態 {#med}                       # L1 章節
-## 十一、文獻速報 — CrossRef 期刊 {#ref}     # L3 章節
-## 十二、台灣急診情境備註 {#tw}
-## 十三、本週 Key Takeaways {#key}
+## 一、OMI / 急性冠症 {#omi}
+## 二、節律與電生理 {#arr}
+## 三、AI ECG / 穿戴 {#ai}
+## 四、Resus / 急救 {#res}
+## 五、教學案例精選 {#tch}
+## 六、追蹤作者本週新作（PubMed）{#aut}      # L2 章節，7 位作者整理
+## 七、媒體動態 {#med}                       # L1 章節
+## 八、文獻速報 — CrossRef 期刊 {#ref}       # L3 章節
+## 九、台灣急診情境備註 {#tw}
+## 十、本週 Key Takeaways {#key}
 ```
+
+> 章節 II「節律與電生理」涵蓋以下 5 個子主題，內文用 H3 子標題分節：
+> - **節律 (Arrhythmia)**：AF / SVT / VT / 電風暴 / palpitations
+> - **傳導 (Conduction)**：AV block / Mobitz / Wenckebach / LBBB / RBBB / fascicular
+> - **通道病 (Channelopathy)**：LQTS / Brugada / CPVT / 早期再極化
+> - **裝置 (Devices)**：Pacemaker / ICD / CRT / S-ICD / Holter / Loop recorder
+> - **消融 (Ablation)**：Catheter ablation / PFA / Cryoablation / STAR
+
+> 偶爾出現的「毒物 + 心律」case（如 aconitine sodium channel toxicity → polymorphic VT）併進章節 II「通道病」子節 或 V「教學案例」。
 
 每章「導言 → 3-4 重點 → **Bottom line**」醫學 editorial 結構。
 某章沒新訊號 → 寫 `_本週無新訊號_`。
