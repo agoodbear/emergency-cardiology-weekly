@@ -1,0 +1,67 @@
+# PubMed 指定作者監控
+# Used by: src/author_fetcher.py
+#
+# 透過 NCBI E-utilities (esearch + efetch) 抓最近 N 天該作者新發表論文。
+# 不需 API key（>3 req/sec 才需要）。
+#
+# Fields:
+#   name              顯示用名（中文或英文）
+#   query             PubMed [Author] query string
+#                     格式建議：Lastname FM[Author] AND (Affiliation[Affiliation] OR ORCID[Author Identifier])
+#                     重名嚴重的作者一定要加 affiliation 或 ORCID 過濾
+#   days_back         往回抓幾天（預設 14）
+#   max_items         最多抓幾篇（預設 20）
+#   tag               主題 tag（給報告分類用）
+#   x_handle          對應 X.com handle（留 reference 用，author_fetcher 不會抓 X）
+
+pubmed_email: "agoodbear@gmail.com"
+
+authors:
+  - name: Stephen W. Smith
+    query: 'Smith SW[Author] AND (Hennepin[Affiliation] OR Minnesota[Affiliation] OR ECG[Title/Abstract] OR electrocardio*[Title/Abstract])'
+    days_back: 30
+    max_items: 15
+    tag: OMI
+    x_handle: smithECGBlog
+
+  - name: Pendell Meyers
+    query: 'Meyers HP[Author] OR (Meyers H[Author] AND (Stony Brook[Affiliation] OR ECG[Title/Abstract] OR electrocardio*[Title/Abstract]))'
+    days_back: 30
+    max_items: 15
+    tag: OMI
+    x_handle: PendellM
+
+  - name: Ken Grauer
+    query: 'Grauer K[Author] AND (Florida[Affiliation] OR ECG[Title/Abstract] OR electrocardio*[Title/Abstract])'
+    days_back: 60
+    max_items: 10
+    tag: ECG教學
+    x_handle: ekgpress
+
+  - name: Jesse McLaren
+    query: 'McLaren JTT[Author] OR (McLaren J[Author] AND (Toronto[Affiliation] OR ECG[Title/Abstract] OR electrocardio*[Title/Abstract] OR emergency[Title/Abstract]))'
+    days_back: 60
+    max_items: 10
+    tag: ECG教學
+    x_handle: ecgcases
+
+  - name: Emre Aslanger
+    query: 'Aslanger E[Author] OR Aslanger EK[Author]'
+    days_back: 30
+    max_items: 15
+    tag: OMI
+    x_handle: AslangerE
+
+  - name: Willy Frick
+    query: 'Frick W[Author] OR Frick WH[Author] OR Frick WG[Author] AND (Washington University[Affiliation] OR cardiology[Title/Abstract] OR electrocardio*[Title/Abstract])'
+    days_back: 60
+    max_items: 10
+    tag: Cardiology
+    x_handle: willyhfrick
+
+  - name: Sam Ghali
+    query: 'Ghali S[Author] OR Ghali SG[Author] AND (emergency[Title/Abstract] OR resuscitation[Title/Abstract] OR ECG[Title/Abstract] OR electrocardio*[Title/Abstract])'
+    days_back: 60
+    max_items: 10
+    tag: EM/Resus
+    x_handle: EM_RESUS

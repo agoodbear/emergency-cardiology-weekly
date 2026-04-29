@@ -62,40 +62,41 @@ journals:
     max_items: 25
     bc_filter: true
 
-  # ── Uncomment to activate broader cardiology journals ────────────────────
+  # ── 廣域 cardiology 期刊（2026-04-29 啟用）──────────────────────────────
+  - name: Europace
+    full_name: "Europace"
+    issn: "1099-5129"
+    days_back: 14
+    max_items: 25
+    bc_filter: true
+
+  - name: JACC
+    full_name: "Journal of the American College of Cardiology"
+    issn: "0735-1097"
+    days_back: 14
+    max_items: 30
+    bc_filter: true
+
+  - name: European Heart J
+    full_name: "European Heart Journal"
+    issn: "0195-668X"
+    days_back: 14
+    max_items: 30
+    bc_filter: true
+
+  - name: JAMA Cardiology
+    full_name: "JAMA Cardiology"
+    issn: "2380-6583"
+    days_back: 14
+    max_items: 25
+    bc_filter: true
+
+  # ── Uncomment to activate further journals ───────────────────────────────
   # - name: Circulation
   #   full_name: "Circulation"
   #   issn: "0009-7322"
   #   days_back: 14
   #   max_items: 30
-  #   bc_filter: true
-
-  # - name: JACC
-  #   full_name: "Journal of the American College of Cardiology"
-  #   issn: "0735-1097"
-  #   days_back: 14
-  #   max_items: 30
-  #   bc_filter: true
-
-  # - name: Europace
-  #   full_name: "Europace"
-  #   issn: "1099-5129"
-  #   days_back: 14
-  #   max_items: 25
-  #   bc_filter: true
-
-  # - name: European Heart J
-  #   full_name: "European Heart Journal"
-  #   issn: "0195-668X"
-  #   days_back: 14
-  #   max_items: 30
-  #   bc_filter: true
-
-  # - name: JAMA Cardiology
-  #   full_name: "JAMA Cardiology"
-  #   issn: "2380-6583"
-  #   days_back: 14
-  #   max_items: 25
   #   bc_filter: true
 
   # - name: JEM
@@ -104,3 +105,10 @@ journals:
   #   days_back: 14
   #   max_items: 25
   #   bc_filter: true
+
+  # - name: J Cardiovasc Electrophysiol
+  #   full_name: "Journal of Cardiovascular Electrophysiology"
+  #   issn: "1045-3873"
+  #   days_back: 14
+  #   max_items: 25
+  #   bc_filter: false   # already EP-specific

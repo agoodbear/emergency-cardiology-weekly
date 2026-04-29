@@ -1,26 +1,18 @@
-# ECG / Emergency Cardiology KOL seed accounts
-# Format: one Twitter handle per line (no @)
-# Picked conservatively to include only well-established EM/cardiology educators.
+# ECG / Emergency Cardiology X.com seed accounts (2026-04-29 重新指定)
+# Format: one X handle per line (no @)
+# 8 位指定作者：高度跟 PubMed L2 作者重疊，互補不重覆
+#   L2 (PubMed) 抓正式論文 / L4 (X) 抓即時 case 短文
 
-# OMI / ECG teaching
-smithECGBlog
-amalmattu
-EMSwami
-hqmeded
+# === ECG 教學 / OMI ===
+smithECGBlog       # Stephen W. Smith — Hennepin Healthcare, OMI/STEMI 宗師
+PendellM           # Pendell Meyers — OMI 概念創立者
+ekgpress           # Ken Grauer — KG-EKG Press, ECG 教學
+AslangerE          # Emre Aslanger — Istanbul, OMI manifesto 共同作者
+ecgcases           # Jesse McLaren — Toronto, ECG Cases blog
+willyhfrick        # Willy Frick — WashU Cardiology
 
-# EM / critical care with cardiac content
-EMCrit
-First10EM
-srrezaie
-PulmCrit
-emupdates
-ALiEMteam
+# === EM / Resus ===
+EM_RESUS           # Sam Ghali — EM/Resus, ECG 短文常客
 
-# Societies / official channels
-HRSonline
-escardio
-ACCinTouch
-ACEPNow
-
-# AI ECG / tooling
-PMcardio
+# === AI ECG 人類版（取代 @PMcardioBot AI 自動帳號）===
+RobertHermanMD     # Robert Herman — Powerful Medical / PMcardio 創辦人

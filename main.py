@@ -17,7 +17,7 @@ from rich.console import Console
 from rich.table import Table
 
 sys.path.insert(0, str(Path(__file__).parent))
-from src import db, fetcher, discover, reporter, webscraper, crossref_fetcher
+from src import db, fetcher, discover, reporter, webscraper, crossref_fetcher, author_fetcher
 
 console = Console()
 CREDS_FILE = Path(__file__).parent / "data" / ".creds"
@@ -159,11 +159,39 @@ def cmd_journals():
     return results
 
 
+def cmd_authors():
+    import asyncio, json
+    console.print("\n[bold]Fetching tracked authors' recent PubMed articles...[/bold]")
+    results = asyncio.run(author_fetcher.fetch_all())
+    for author, articles in results.items():
+        console.print(f"  [cyan]{author}[/cyan]: {len(articles)} ECG articles")
+        for a in articles[:4]:
+            has_abs = "✓" if a.abstract_digest else "—"
+            console.print(f"    [{has_abs}] {a.title[:75]}")
+            console.print(f"        {a.url}")
+
+    out = Path(__file__).parent / "data" / "authors_cache.json"
+    out.parent.mkdir(exist_ok=True)
+    out.write_text(json.dumps(
+        {author: [{"title": a.title, "pmid": a.pmid, "journal": a.journal,
+                   "authors": a.authors, "published": a.published,
+                   "abstract": a.abstract, "abstract_digest": a.abstract_digest,
+                   "tags": a.tags, "url": a.url,
+                   "matched_author": a.matched_author, "author_tag": a.author_tag}
+                  for a in arts]
+         for author, arts in results.items()},
+        ensure_ascii=False, indent=2
+    ))
+    console.print(f"[green]✓ Cached → {out}[/green]")
+    return results
+
+
 def cmd_run():
     cmd_fetch()
     cmd_discover()
     cmd_scrape()
     cmd_journals()
+    cmd_authors()
     cmd_report()
 
 
@@ -174,6 +202,7 @@ COMMANDS = {
     "report": cmd_report,
     "scrape": cmd_scrape,
     "journals": cmd_journals,
+    "authors": cmd_authors,
     "accounts": cmd_accounts,
     "run": cmd_run,
 }
