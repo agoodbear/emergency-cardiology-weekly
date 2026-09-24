@@ -22,3 +22,6 @@ cookies.json
 
 # uv
 .python-version
+
+# cloud routine 產物
+cloud/out/

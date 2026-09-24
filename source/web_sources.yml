@@ -50,6 +50,9 @@ sources:
     max_items: 20
     bc_filter: true
 
+  # First10EM / ALiEM 都是廣域 EM 部落格，主題覆蓋 trauma / tox / sepsis / peds 等，
+  # 真正涵蓋 ECG / 急性冠症 / 節律的文章每月 ~0-1 篇是常態。bc_filter 經常過濾光是事實，
+  # 不是 bug。週報 L1 章節若這兩源空白，照寫 _本週無新訊號_ 帶過。
   - name: First10EM
     type: rss
     url: "https://first10em.com/feed/"
@@ -104,12 +107,14 @@ sources:
     max_items: 20
     noise_filter: "membership|about|contact|award|registration"
 
+  # AHA heart.org 大部分頁面是 evergreen 衛教（recipes / CPR FAQ / 計算器），
+  # 真正的「週報級新聞」每週 1-2 篇是常態。低 yield 不是 bug。
   - name: AHA
     type: google_news
     domain: heart.org
-    query: "ECG OR arrhythmia OR sudden cardiac"
+    query: "ECG OR arrhythmia OR sudden cardiac OR cardiac arrest OR atrial fibrillation"
     max_items: 20
-    noise_filter: "donate|volunteer|about|contact|store|membership"
+    noise_filter: "donate|volunteer|about|contact|store|membership|recipe|cookbook|walk|donation|gala"
 
 # HTTP headers used for all scraper requests
 http_headers:

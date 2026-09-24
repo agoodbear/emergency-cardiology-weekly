@@ -29,7 +29,7 @@ journals:
   - name: JACC-EP
     full_name: "JACC: Clinical Electrophysiology"
     issn: "2405-500X"
-    days_back: 14
+    days_back: 30   # CrossRef indexing delay + monthly cadence; 14d 視窗 0 篇
     max_items: 25
     bc_filter: true
 
@@ -51,8 +51,8 @@ journals:
   - name: Annals EM
     full_name: "Annals of Emergency Medicine"
     issn: "0196-0644"
-    days_back: 14
-    max_items: 30
+    days_back: 30   # 廣域 EM 期刊，14d 視窗 ECG 相關篇數常掛 0
+    max_items: 80   # 30d 有 73 篇但 ECG 相關只 5 篇，rows 太少會全被非 ECG 文壓到後面截掉
     bc_filter: true
 
   - name: Resuscitation
@@ -66,15 +66,15 @@ journals:
   - name: Europace
     full_name: "Europace"
     issn: "1099-5129"
-    days_back: 14
+    days_back: 21   # 月刊 + 偶有索引延遲，21d 視窗較穩
     max_items: 25
     bc_filter: true
 
   - name: JACC
     full_name: "Journal of the American College of Cardiology"
     issn: "0735-1097"
-    days_back: 14
-    max_items: 30
+    days_back: 30   # 月刊 + ACC 大會 abstract 整批晚 1 個月才上 CrossRef
+    max_items: 100  # 廣域 CV，30d 80+ 篇但 ECG 相關 ~6-9 篇，要拉大 rows
     bc_filter: true
 
   - name: European Heart J
@@ -87,8 +87,8 @@ journals:
   - name: JAMA Cardiology
     full_name: "JAMA Cardiology"
     issn: "2380-6583"
-    days_back: 14
-    max_items: 25
+    days_back: 30   # 月刊；14d 視窗大多是 lipid / HF / 預防主題，過 ECG filter 後 0
+    max_items: 60   # 30d 33 篇但 ECG 相關 ~7 篇，rows 拉大避免被截斷
     bc_filter: true
 
   # ── Uncomment to activate further journals ───────────────────────────────

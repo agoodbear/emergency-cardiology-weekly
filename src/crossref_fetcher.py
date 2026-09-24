@@ -181,15 +181,25 @@ async def _fetch_journal(
         "order": "desc",
         "select": "DOI,title,author,abstract,published,published-print,published-online,URL,container-title",
     }
-    try:
-        r = await client.get(
-            "https://api.crossref.org/works",
-            params=params,
-            headers={"User-Agent": f"ecg-weekly/1.0 (mailto:{email})"},
-            timeout=25,
-        )
-        r.raise_for_status()
-    except Exception:
+    # CrossRef polite-pool rate limits aggressive concurrent traffic; 10 條 journal
+    # 同時打過去偶爾會被 429 / connection reset 打回。重試 3 次 + 指數退避。
+    last_err = None
+    for attempt in range(3):
+        try:
+            r = await client.get(
+                "https://api.crossref.org/works",
+                params=params,
+                headers={"User-Agent": f"ecg-weekly/1.0 (mailto:{email})"},
+                timeout=30,
+            )
+            r.raise_for_status()
+            break
+        except Exception as e:
+            last_err = e
+            if attempt < 2:
+                await asyncio.sleep(2 ** attempt)  # 1s, 2s
+    else:
+        print(f"[crossref] {journal.get('name','?')} failed after retries: {last_err}")
         return []
 
     articles = []

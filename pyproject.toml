@@ -3,13 +3,13 @@ name = "emergency-cardiology-weekly"
 version = "0.1.0"
 requires-python = ">=3.11"
 dependencies = [
-    "twscrape>=0.12.0",
     "rich>=13.0.0",
     "httpx>=0.27.0",
     "beautifulsoup4>=4.12.0",
     "lxml>=6.0.4",
     "pyyaml>=6.0.3",
     "playwright>=1.58.0",
+    "twscrape>=0.17.0",
 ]
 
 [tool.hatch.build.targets.wheel]

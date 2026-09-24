@@ -17,7 +17,7 @@ from rich.console import Console
 from rich.table import Table
 
 sys.path.insert(0, str(Path(__file__).parent))
-from src import db, fetcher, discover, reporter, webscraper, crossref_fetcher, author_fetcher
+from src import db, fetcher, fetcher_playwright, discover, reporter, webscraper, crossref_fetcher, author_fetcher
 
 console = Console()
 CREDS_FILE = Path(__file__).parent / "data" / ".creds"
@@ -62,8 +62,10 @@ def _require_creds() -> tuple[str, str, str, str]:
 def cmd_fetch():
     username, email, auth_token, ct0 = _require_creds()
     db.init_db()
-    console.print("\n[bold]Fetching tweets...[/bold]")
-    fetcher.fetch(username, email, auth_token, ct0)
+    console.print("\n[bold]Fetching tweets (Playwright)...[/bold]")
+    # 2026-04-30 起改走 Playwright（twscrape 整套對最新 X 反爬機制全失效，
+    # 連 PR fork 也跟不上 main.js chunk loader 變化）
+    fetcher_playwright.fetch(username, email, auth_token, ct0)
     console.print("[green]✓ Fetch complete.[/green]")
 
 

@@ -47,21 +47,24 @@ authors:
 
   - name: Emre Aslanger
     query: 'Aslanger E[Author] OR Aslanger EK[Author]'
-    days_back: 30
+    days_back: 90   # 一年發 ~7 篇，30d 經常 0；90d 視窗能穩定抓到
     max_items: 15
     tag: OMI
     x_handle: AslangerE
 
   - name: Willy Frick
     query: 'Frick W[Author] OR Frick WH[Author] OR Frick WG[Author] AND (Washington University[Affiliation] OR cardiology[Title/Abstract] OR electrocardio*[Title/Abstract])'
-    days_back: 60
+    days_back: 180   # 一年發 ~5 篇，60d 經常 0；180d 視窗能穩定抓到
     max_items: 10
     tag: Cardiology
     x_handle: willyhfrick
 
+  # Sam Ghali 是 FOAMed/EM Resus 教學人物，PubMed 365d 0 篇 — 學術發表幾乎全無，
+  # 留 entry 只是為了讓 L2 章節數 = 7（與 CLAUDE.md 規格對齊），實際內容靠 L4 X 抓推文。
+  # 之後若 L4 跑起來，可考慮把 Ghali 從 L2 移到「僅 L4 來源」清單。
   - name: Sam Ghali
     query: 'Ghali S[Author] OR Ghali SG[Author] AND (emergency[Title/Abstract] OR resuscitation[Title/Abstract] OR ECG[Title/Abstract] OR electrocardio*[Title/Abstract])'
-    days_back: 60
+    days_back: 365   # 拉滿 365 仍可能 0；他不是學者
     max_items: 10
     tag: EM/Resus
     x_handle: EM_RESUS
