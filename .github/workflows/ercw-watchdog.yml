@@ -1,0 +1,48 @@
+name: ERCW watchdog
+
+# 雲端 routine 每週日 10:00（台北）跑。14:00 檢查本週週報有沒有上線；
+# 沒上線也沒有開著的 PR（＝routine 整個沒產出）→ 推 LINE 給 Bear。
+# 手動執行時勾 test 會送一則測試訊息，用來確認 LINE 通道。
+on:
+  schedule:
+    - cron: "0 6 * * 0"   # 週日 06:00 UTC = 台北 14:00
+  workflow_dispatch:
+    inputs:
+      test:
+        description: "只送一則 LINE 測試訊息"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      LINE_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
+      LINE_TO: ${{ secrets.LINE_TO_BEAR }}
+      BLOG: agoodbear/agoodbear.github.io
+    steps:
+      - name: Check this week and notify
+        run: |
+          send() {
+            body=$(jq -n --arg to "$LINE_TO" --arg t "$1" '{to:$to,messages:[{type:"text",text:$t}]}')
+            curl -sf -X POST https://api.line.me/v2/bot/message/push \
+              -H "Authorization: Bearer $LINE_TOKEN" -H 'Content-Type: application/json' -d "$body" && echo "LINE sent"
+          }
+          if [ "${{ inputs.test }}" = "true" ]; then
+            send "🔔 ER Cardio Weekly 通知測試：之後每週上線、查核沒過、或雲端沒產出，都會推到這裡。"
+            exit 0
+          fi
+          week=$(TZ=Asia/Taipei python3 -c "from datetime import date;d=date.today();print(f'{d.isocalendar()[0]}-W{d.isocalendar()[1]:02d}')")
+          if gh api "repos/$BLOG/contents/content/er-cardio-weekly/$week/index.md?ref=hugo-source" >/dev/null 2>&1; then
+            echo "$week 已在 hugo-source"; exit 0
+          fi
+          pr=$(gh pr list -R "$BLOG" --head "claude/ercw-$week" --state open --json url -q '.[0].url' 2>/dev/null || true)
+          if [ -n "$pr" ]; then
+            echo "$week 有開著的 PR（查核未過，已由 auto-PR 通知）：$pr"; exit 0
+          fi
+          send "⚠️ ER Cardio Weekly ${week} 到台北 14:00 還沒產出（雲端排程可能沒跑或中途失敗）。
+          看執行紀錄：https://claude.ai/code/routines"
