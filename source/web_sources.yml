@@ -76,13 +76,11 @@ sources:
     noise_filter: "about|contact|faculty|podcast index"
 
   # ── ECG Weekly (Amal Mattu) ───────────────────────────────────────────────
-  # Archive page is public — lists 20 most recent workouts with slug (title)
-  # and image upload path (YYYY/MM date). Video + written analysis are gated
-  # behind membership login; we capture only the metadata here and optionally
-  # deep-fetch full content in a separate pipeline (see ecgweekly_deep.py).
+  # Since 2026-10-06: ONE anonymous request/run (the public sitemap). Title is
+  # derived from the slug, date from <lastmod>. No per-article page fetches.
   - name: ECG Weekly (Amal Mattu)
     type: ecgweekly
-    url: "https://ecgweekly.com/weekly-workout/"
+    url: "https://ecgweekly.com/sitemap.xml"
     max_items: 20
 
   # ── Society / news outlets via Google News ────────────────────────────────

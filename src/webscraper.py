@@ -2,6 +2,7 @@
 
 import asyncio
 import re
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from email.utils import parsedate_to_datetime
 from functools import lru_cache
@@ -179,107 +180,74 @@ async def _fetch_google_news(client: httpx.AsyncClient, src: dict) -> list[Artic
     return articles
 
 
-_MONTH_NAMES = ("January|February|March|April|May|June|July|August|September|October|November|December")
-_ECGWEEKLY_DATE_RE = re.compile(rf"\b({_MONTH_NAMES})\s+(\d{{1,2}}),\s+(20\d\d)\b")
-_ECGWEEKLY_TITLE_SUFFIX_RE = re.compile(r"\s*[–\-]\s*ECG Weekly\s*$", re.IGNORECASE)
-_MONTH_TO_NUM = {m: f"{i+1:02d}" for i, m in enumerate(
-    ["January","February","March","April","May","June","July","August","September","October","November","December"]
-)}
+_ECGWEEKLY_SITEMAP = "https://ecgweekly.com/sitemap.xml"
+_ECGWEEKLY_WORKOUT_RE = re.compile(r"^https?://(?:www\.)?ecgweekly\.com/weekly-workout/([^/?#]+)/?$")
+_SITEMAP_NS = "{http://www.sitemaps.org/schemas/sitemap/0.9}"
 
 
-async def _fetch_ecgweekly_page(client: httpx.AsyncClient, url: str) -> Optional[dict]:
-    """Fetch one workout page and extract real title, date, and HPI preview.
+def _slug_to_title(slug: str) -> str:
+    return " ".join(w.capitalize() for w in slug.split("-") if w)
 
-    The page itself is public preview — full video/analysis is gated, but the
-    preamble (title, date, HPI) is rendered in plain HTML and searchable.
+
+def _parse_ecgweekly_sitemap(xml_text: str, source: str, max_items: int) -> list[Article]:
+    """Pull weekly-workout URLs (+ lastmod as date) out of the sitemap XML.
+
+    URLs are normalised to no trailing slash (matches the post-2026-09-08
+    Next.js site). Newest lastmod first; entries without lastmod keep
+    sitemap order after the dated ones.
     """
     try:
-        r = await client.get(url, timeout=20)
-        if r.status_code != 200:
-            return None
-    except Exception:
-        return None
+        root = ET.fromstring(xml_text)
+    except ET.ParseError:
+        return []
 
-    soup = BeautifulSoup(r.text, "html.parser")
+    entries: list[tuple[str, str, Optional[str]]] = []
+    seen: set[str] = set()
+    for node in root.iter(f"{_SITEMAP_NS}url"):
+        loc = (node.findtext(f"{_SITEMAP_NS}loc") or "").strip()
+        m = _ECGWEEKLY_WORKOUT_RE.match(loc)
+        if not m:
+            continue
+        url = loc.rstrip("/")
+        if url in seen:
+            continue
+        seen.add(url)
+        lastmod = (node.findtext(f"{_SITEMAP_NS}lastmod") or "").strip()[:10] or None
+        entries.append((url, m.group(1), lastmod))
 
-    title_el = soup.find("title")
-    title = title_el.get_text(strip=True) if title_el else ""
-    title = _ECGWEEKLY_TITLE_SUFFIX_RE.sub("", title)
-
-    pub = None
-    m = _ECGWEEKLY_DATE_RE.search(r.text)
-    if m:
-        pub = f"{m.group(3)}-{_MONTH_TO_NUM[m.group(1)]}-{int(m.group(2)):02d}"
-
-    # Preview text: strip the preamble (date + "Weekly Workout" + title +
-    # subtitle) and keep everything after the HPI label when present.
-    summary = ""
-    post = soup.find(class_="post-content")
-    if post:
-        raw = post.get_text(separator=" ", strip=True)
-        # Cut everything up to and including "HPI " if present, else take from
-        # first sentence after the title.
-        if " HPI " in raw:
-            summary = raw.split(" HPI ", 1)[1][:600].strip()
-        else:
-            # Fallback — drop repeated title preamble
-            summary = raw[:600].strip()
-
-    return {"title": title, "published": pub, "summary": summary}
+    dated = sorted((e for e in entries if e[2]), key=lambda e: e[2], reverse=True)
+    undated = [e for e in entries if not e[2]]
+    articles: list[Article] = []
+    for url, slug, lastmod in (dated + undated)[:max_items]:
+        title = _slug_to_title(slug)
+        articles.append(Article(
+            title=title,
+            url=url,
+            source=source,
+            published=lastmod,
+            summary="",
+            tags=_extract_tags(title),
+        ))
+    return articles
 
 
 async def _fetch_ecgweekly(client: httpx.AsyncClient, src: dict) -> list[Article]:
-    """Scrape ECG Weekly (Amal Mattu) — public previews only, no login.
+    """ECG Weekly (Amal Mattu) -- exactly ONE anonymous request per run.
 
-    Two-step fetch:
-      1. archive page /weekly-workout/  → list of workout URLs (up to 20 recent)
-      2. each individual workout page   → real title, publish date, HPI preview
-
-    Full video + analysis is behind membership — those are captured by a
-    separate deep-dive pipeline (not in this fetcher).
+    The paid account was locked for automated access (2026-10-06), so we no
+    longer open the archive page or individual workout pages. Only the public
+    sitemap is fetched; title comes from the slug, date from <lastmod>.
+    Any failure returns [] with no retry.
     """
-    url = src.get("url", "https://ecgweekly.com/weekly-workout/")
+    url = src.get("url", _ECGWEEKLY_SITEMAP)
     max_items = src.get("max_items", 15)
     try:
         r = await client.get(url, timeout=20)
         if r.status_code != 200:
             return []
+        return _parse_ecgweekly_sitemap(r.text, src["name"], max_items)
     except Exception:
         return []
-
-    soup = BeautifulSoup(r.text, "html.parser")
-    seen: set[str] = set()
-    hrefs: list[str] = []
-    for a in soup.find_all("a", href=re.compile(r"/weekly-workout/[^/]+/$")):
-        href = a["href"]
-        if href in seen:
-            continue
-        seen.add(href)
-        hrefs.append(href)
-        if len(hrefs) >= max_items:
-            break
-
-    pages = await asyncio.gather(
-        *[_fetch_ecgweekly_page(client, h) for h in hrefs],
-        return_exceptions=True,
-    )
-
-    articles: list[Article] = []
-    for href, result in zip(hrefs, pages):
-        if isinstance(result, Exception) or result is None:
-            continue
-        title = result["title"] or href.rstrip("/").split("/")[-1].replace("-", " ").title()
-        summary = result["summary"]
-        articles.append(Article(
-            title=title,
-            url=href,
-            source=src["name"],
-            published=result["published"],
-            summary=summary,
-            tags=_extract_tags(title + " " + summary),
-        ))
-
-    return articles
 
 
 async def fetch_all(days: int = 7) -> dict[str, list[Article]]:
