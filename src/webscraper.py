@@ -185,8 +185,42 @@ _ECGWEEKLY_WORKOUT_RE = re.compile(r"^https?://(?:www\.)?ecgweekly\.com/weekly-w
 _SITEMAP_NS = "{http://www.sitemaps.org/schemas/sitemap/0.9}"
 
 
+_ACRONYMS = {w.lower(): w for w in (
+    "ECG EKG VT SVT VF AF AFL WPW STEMI NSTEMI OMI ACS MI AV SA QRS QT QTc ST LBBB RBBB "
+    "LVH RVH PE TCA CPR ACLS EMS ED ICU BBB AIVR AVNRT AVRT PVC PAC MAT LAD RCA LCX TQRSD "
+    "HATW DDx I II III IV V VI VII VIII IX X UMMC").split()}
+_ACRONYMS.update({"ecgs": "ECGs", "ekgs": "EKGs", "pacs": "PACs", "pvcs": "PVCs", "stemis": "STEMIs"})
+_PROPER = {"mobitz": "Mobitz", "wellens": "Wellens", "brugada": "Brugada", "winter": "Winter",
+           "mattus": "Mattu's"}
+_SMALL = {"a", "an", "the", "and", "or", "of", "in", "on", "at", "to", "for", "with",
+          "by", "vs", "from", "as", "is"}
+_MONTHS = {"jan": "Jan", "feb": "Feb", "mar": "Mar", "apr": "Apr", "may": "May", "jun": "Jun",
+           "jul": "Jul", "aug": "Aug", "sep": "Sep", "sept": "Sept", "oct": "Oct",
+           "nov": "Nov", "dec": "Dec", "january": "January", "february": "February",
+           "march": "March", "april": "April", "june": "June", "july": "July",
+           "august": "August", "september": "September", "october": "October",
+           "november": "November", "december": "December"}
+
+
 def _slug_to_title(slug: str) -> str:
-    return " ".join(w.capitalize() for w in slug.split("-") if w)
+    """slug -> 可讀標題：縮寫全大寫、小字非句首小寫、日期型 slug 轉 'Sept 21, 2026'。"""
+    words = [w for w in re.split(r"[-_]+", slug.strip("/")) if w]
+    if len(words) == 3 and words[0].lower() in _MONTHS and words[1].isdigit() and words[2].isdigit():
+        return f"{_MONTHS[words[0].lower()]} {int(words[1])}, {words[2]}"
+    out = []
+    for i, w in enumerate(words):
+        lw = w.lower()
+        if lw in _ACRONYMS:
+            out.append(_ACRONYMS[lw])
+        elif lw == "de" and i + 1 < len(words) and words[i + 1].lower() == "winter":
+            out.append("de" if i > 0 else "De")
+        elif lw in _PROPER:
+            out.append(_PROPER[lw])
+        elif lw in _SMALL and i > 0:
+            out.append(lw)
+        else:
+            out.append(w.capitalize())
+    return " ".join(out)
 
 
 def _parse_ecgweekly_sitemap(xml_text: str, source: str, max_items: int) -> list[Article]:

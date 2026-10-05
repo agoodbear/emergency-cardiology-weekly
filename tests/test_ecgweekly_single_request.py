@@ -40,7 +40,7 @@ def test_single_request_and_parsed_fields():
         "https://ecgweekly.com/weekly-workout/new-stemi-mimic",
         "https://ecgweekly.com/weekly-workout/mid-brugada-sign",
     ]
-    assert arts[0].title == "New Stemi Mimic"
+    assert arts[0].title == "New STEMI Mimic"
     assert arts[0].published == "2026-09-07"
     assert arts[0].source == SRC["name"]
 
@@ -60,3 +60,27 @@ def test_network_error_returns_empty():
         raise httpx.ConnectError("down")
     arts, calls = _run(boom)
     assert arts == [] and len(calls) == 1
+
+
+# --- 真實 sitemap（2026-10-06 匿名單次抓取）---
+from pathlib import Path
+
+REAL = (Path(__file__).parent / "fixtures" / "real_sitemap_2026-10-06.xml").read_text()
+
+
+def test_real_sitemap_all_and_newest_first():
+    arts = webscraper._parse_ecgweekly_sitemap(REAL, "X", 10_000)
+    assert len(arts) == 619
+    assert arts[0].url.endswith("/chest-pain-an-unusual-distribution-of-st-segment-changes")
+    assert arts[0].published == "2026-10-05"
+    top5 = webscraper._parse_ecgweekly_sitemap(REAL, "X", 5)
+    assert [a.url for a in top5] == [a.url for a in arts[:5]]
+
+
+def test_title_rules():
+    t = webscraper._slug_to_title
+    assert t("sept-21-2026") == "Sept 21, 2026"
+    assert t("chest-pain-an-unusual-distribution-of-st-segment-changes") == \
+        "Chest Pain an Unusual Distribution of ST Segment Changes"
+    assert t("the-wellens-pattern-vs-de-winter-t-waves") == "The Wellens Pattern vs de Winter T Waves"
+    assert t("when-to-default-to-vt") == "When to Default to VT"
