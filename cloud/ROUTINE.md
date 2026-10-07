@@ -4,6 +4,12 @@
 **上線規則：你寫完 → 獨立查核代理通過 → 自動合併上線。查核沒過就不上線、PR 留給 Bear。**
 Bear 不逐期審稿，所以第 4、5.5 步是唯一的品質閘門，不可省略、不可放水。
 
+> 🔴 **禁止開啟 ecgweekly.com（2026-10-07 起，任何步驟、任何代理都適用）**
+> ECG Weekly 偵測到自動化存取就會鎖 Bear 的帳號（2026-10-05 已被鎖過一次）。
+> 不准用 WebFetch、curl、瀏覽器或任何方式連 `ecgweekly.com`（含首頁、sitemap、文章、影片）。
+> 週報不寫 ECG Weekly 的內容；舊期數或任何地方出現 ecgweekly.com 連結，一律不開、不引用、不當查證路徑。
+> 本 repo 的 `CLAUDE.md` 若還寫著 ECG Weekly 抓取或引用範例，以這條為準。
+
 ## 0. 找到兩個 repo、決定週次
 
 - 本 repo：`emergency-cardiology-weekly`（抓料程式＋本手冊）
@@ -64,6 +70,7 @@ FAIL 就修稿再跑，最多修 3 輪；3 輪仍 FAIL → 不 push，回報失�
 - 每一項都**當場打開原文**核對（PubMed 用 `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=<PMID>&rettype=abstract&retmode=text`，要利益衝突聲明用 `retmode=xml` 找 `<CoiStatement>`；期刊頁 curl 被擋就改 WebFetch）。
 - 檢查：數字是否相符、是否推論過頭（把單中心／單臂／案例寫成臨床指令）、`#:~:text=` 錨點句子是否真的在原文、**作者對所報導產品有無利益衝突且稿中有無揭露**。
 - 不准用 Playwright 或瀏覽器自動化。
+- **不准開啟 ecgweekly.com**（任何網址都不行）；稿中若出現 ECG Weekly 引用，直接列為必修（刪除），不要去開原文核對。
 - 回傳：逐項表（項目｜稿中寫法｜原文引句｜URL｜相符／不符／無法開啟／過度推論／缺揭露）＋「必修清單」＋最後一行 `VERDICT=PASS` 或 `VERDICT=FAIL`。
 
 處理結果：
