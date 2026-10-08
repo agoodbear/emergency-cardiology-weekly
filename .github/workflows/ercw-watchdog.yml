@@ -45,4 +45,5 @@ jobs:
             echo "$week 有開著的 PR（查核未過，已由 auto-PR 通知）：$pr"; exit 0
           fi
           send "⚠️ ER Cardio Weekly ${week} 到台北 14:00 還沒產出（雲端排程可能沒跑或中途失敗）。
-          看執行紀錄：https://claude.ai/code/routines"
+          看執行紀錄：https://claude.ai/code/routines
+          👉 回覆「cc 修 週報」我重新觸發雲端排程，寫完會再回報"
