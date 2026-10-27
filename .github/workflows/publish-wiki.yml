@@ -1,11 +1,6 @@
 name: Publish Reports to Wiki
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "reports/**.md"
-
   workflow_dispatch:
 
 jobs:
