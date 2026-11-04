@@ -79,16 +79,14 @@ def _parse_pubdate(article_elem) -> Optional[str]:
 
 
 def _parse_authors(article_elem) -> list[str]:
-    out = []
+    names = []
     for a in article_elem.iter("Author"):
         last = a.findtext("LastName") or ""
         init = a.findtext("Initials") or ""
         if last:
-            out.append(f"{last} {init}".strip())
-        if len(out) >= 4:
-            out.append("et al.")
-            break
-    return out
+            names.append(f"{last} {init}".strip())
+    # 超過 4 位才加 "et al."（剛好 4 位不加）
+    return names[:4] + (["et al."] if len(names) > 4 else [])
 
 
 async def _esearch(client: httpx.AsyncClient, query: str, days_back: int,
