@@ -171,6 +171,29 @@ def fragment_in_text(fragment: str, page_text: str) -> bool:
 
 # ── 站內檢查 ──────────────────────────────────────────────────────────────────
 
+def _exact_case(p: Path, root: Path) -> bool:
+    """macOS 預設檔案系統不分大小寫；逐層比對實際檔名，確保跟 GitHub Pages 一樣大小寫敏感。"""
+    try:
+        rel = p.relative_to(root)
+    except ValueError:
+        return True
+    cur = root
+    for part in rel.parts:
+        if part in ("", "."):
+            continue
+        if part == "..":
+            cur = cur.parent
+            continue
+        try:
+            names = {e.name for e in cur.iterdir()}
+        except OSError:
+            return False
+        if part not in names:
+            return False
+        cur = cur / part
+    return True
+
+
 def check_internal(url: str, site_root: Path, page_rel_dir: str) -> tuple[bool, str]:
     """站內路徑（/x/y 或相對路徑）是否存在於 build 結果。大小寫敏感（GitHub Pages 也是）。"""
     path = urlparse(url).path
@@ -184,7 +207,7 @@ def check_internal(url: str, site_root: Path, page_rel_dir: str) -> tuple[bool, 
     if not target.suffix:
         candidates.append(target.with_suffix(".html"))
     for c in candidates:
-        if c.is_file():
+        if c.is_file() and _exact_case(c, site_root):
             return True, ""
     return False, f"build 結果找不到 {target.relative_to(site_root) if site_root in target.parents else target}"
 
