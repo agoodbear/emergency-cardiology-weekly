@@ -125,3 +125,53 @@ def test_to_markdown_summary():
     rs = [cl.Result("https://a", "link", "OK", 200), cl.Result("https://b", "image", "BROKEN", 404, sources=["/p/"])]
     md = cl.to_markdown(rs)
     assert "| BROKEN | 1 |" in md and "| OK | 1 |" in md and "`https://b`" in md
+
+
+def _mock_client(monkeypatch, handler):
+    real_client = httpx.AsyncClient
+
+    def fake_client(**kw):
+        kw["transport"] = httpx.MockTransport(handler)
+        return real_client(**kw)
+
+    monkeypatch.setattr(httpx, "AsyncClient", fake_client)
+
+
+def test_redirect_into_forbidden_host_is_never_requested(monkeypatch):
+    calls = []
+
+    def handler(request):
+        calls.append(str(request.url))
+        if request.url.host == "short.example.org":
+            return httpx.Response(302, headers={"location": "https://www.ecgweekly.com/weekly-workout/x"})
+        if request.url.host == "hop.example.org" and request.url.path == "/a":
+            return httpx.Response(301, headers={"location": "/final"})
+        return httpx.Response(200, text="ok", headers={"content-type": "text/html"})
+
+    _mock_client(monkeypatch, handler)
+    links = [cl.Link("https://short.example.org/a", "link", ["/p/"]),
+             cl.Link("https://hop.example.org/a", "link", ["/p/"])]
+    res = {r.url: r for r in asyncio.run(cl.check_external(links, check_fragments=False))}
+    assert not any("ecgweekly" in u for u in calls), calls
+    r = res["https://short.example.org/a"]
+    assert r.status == "SKIPPED" and "ecgweekly" in r.note
+    ok = res["https://hop.example.org/a"]
+    assert ok.status == "OK" and ok.final_url == "https://hop.example.org/final"
+
+
+def test_redirect_loop_is_reported(monkeypatch):
+    _mock_client(monkeypatch, lambda r: httpx.Response(302, headers={"location": str(r.url)}))
+    res = asyncio.run(cl.check_external([cl.Link("https://loop.example.org/", "link", [])], False))
+    assert res[0].status == "REDIRECT_LOOP"
+
+
+def test_protocol_relative_urls_are_treated_as_external(tmp_path):
+    page = tmp_path / "er-cardio-weekly" / "2026-w44"
+    page.mkdir(parents=True)
+    (page / "index.html").write_text(
+        '<link rel="stylesheet" href="//cdn.example.org/a.css">'
+        '<a href="//ecgweekly.com/x">e</a>')
+    links, internal = cl.collect(tmp_path, "er-cardio-weekly", [], tmp_path)
+    assert internal == []
+    assert ("https://cdn.example.org/a.css", "stylesheet") in links
+    assert cl.host_policy(links[("https://ecgweekly.com/x", "link")].url)

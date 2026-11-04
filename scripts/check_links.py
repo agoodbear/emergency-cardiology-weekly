@@ -205,6 +205,33 @@ def classify(http_status: int | None, error: str | None) -> str:
     return "BROKEN" if 400 <= http_status < 500 else "ERROR"
 
 
+class PolicyRedirect(Exception):
+    """轉址目的地落在 NEVER_FETCH 名單：不發出請求。"""
+
+
+MAX_REDIRECTS = 10
+
+
+async def _request(client, method: str, url: str):
+    """手動跟轉址：每一跳發請求「之前」都先過 host_policy，
+    避免允許的網址 302 到 ecgweekly.com／x.com 時被自動打過去。"""
+    import httpx
+
+    for _ in range(MAX_REDIRECTS + 1):
+        why = host_policy(url)
+        if why:
+            raise PolicyRedirect(f"轉址到 {urlparse(url).hostname}：{why}")
+        r = await client.request(method, url)
+        location = r.headers.get("location")
+        if r.status_code in (301, 302, 303, 307, 308) and location:
+            url = urldefrag(str(r.url.join(location)))[0]
+            if r.status_code == 303:
+                method = "GET"
+            continue
+        return r
+    raise httpx.TooManyRedirects("too many redirects", request=r.request)
+
+
 async def _fetch_one(client, url: str, want_text: bool) -> tuple[int | None, str | None, str | None, str | None]:
     """回傳 (status, final_url, body_text_or_None, error)。先 HEAD，不行再 GET。"""
     import httpx
@@ -212,15 +239,17 @@ async def _fetch_one(client, url: str, want_text: bool) -> tuple[int | None, str
     target, _ = urldefrag(url)
     try:
         if not want_text:
-            r = await client.head(target)
+            r = await _request(client, "HEAD", target)
             if r.status_code < 400:
                 return r.status_code, str(r.url), None, None
-        r = await client.get(target)
+        r = await _request(client, "GET", target)
         body = None
         ctype = r.headers.get("content-type", "")
         if want_text and r.status_code < 400 and "html" in ctype:
             body = r.text
         return r.status_code, str(r.url), body, None
+    except PolicyRedirect as e:
+        return None, None, None, f"policy-redirect: {e}"
     except httpx.TooManyRedirects:
         return None, None, None, "too many redirects"
     except Exception as e:  # noqa: BLE001 — 任何網路錯誤都要記錄，不中斷整批
@@ -242,8 +271,8 @@ async def check_external(links: list[Link], check_fragments: bool, concurrency: 
     # 同一個去掉 fragment 的網址只打一次
     cache: dict[tuple[str, bool], asyncio.Task] = {}
 
-    async with httpx.AsyncClient(headers=headers, follow_redirects=True, timeout=timeout,
-                                 max_redirects=10) as client:
+    # follow_redirects=False：轉址由 _request 手動處理，才能逐跳檢查政策
+    async with httpx.AsyncClient(headers=headers, follow_redirects=False, timeout=timeout) as client:
 
         async def fetch(base: str, want_text: bool):
             host = urlparse(base).hostname or ""
@@ -269,7 +298,9 @@ async def check_external(links: list[Link], check_fragments: bool, concurrency: 
             status, final, body, err = await get_task(base, want_text)
             res = Result(link.url, link.kind, classify(status, err), status, final,
                          err or "", frag, None, link.sources)
-            if err and "redirect" in err:
+            if err and err.startswith("policy-redirect"):
+                res.status, res.note = "SKIPPED", err
+            elif err and "redirect" in err:
                 res.status = "REDIRECT_LOOP"
             if want_text and body is not None:
                 text = BeautifulSoup(body, "lxml").get_text(" ")
@@ -298,6 +329,8 @@ def collect(site_root: Path | None, section: str | None, files: list[Path],
             rel_dir = str(page.parent.relative_to(site_root))
             src = "/" + rel_dir + "/"
             for url, kind in extract_from_html(page.read_text(encoding="utf-8")):
+                if url.startswith("//"):          # protocol-relative → 當外部 https 處理
+                    url = "https:" + url
                 if url.startswith(("mailto:", "tel:", "javascript:", "data:")) or url.startswith("#"):
                     continue
                 if is_external(url):
