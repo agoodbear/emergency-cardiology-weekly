@@ -102,10 +102,11 @@ def _digest_abstract(abstract: str, max_chars: int = 400) -> str:
     )
     parts, total = [], 0
     for _, s in scored:
-        if total + len(s) > max_chars:
+        sep = 1 if parts else 0          # " ".join 的空白也要算進上限
+        if total + sep + len(s) > max_chars:
             break
         parts.append(s)
-        total += len(s)
+        total += sep + len(s)
     return " ".join(parts).strip() if parts else abstract[:max_chars]
 
 
@@ -151,7 +152,12 @@ def _pub_date(item: dict) -> Optional[str]:
         or item.get("published-online", {}).get("date-parts")
         or [[]]
     )
-    dp = (parts or [[]])[0]
+    # CrossRef 偶爾回 [[null]] 或 [[2026, null]]：截到第一個 None 為止
+    dp = []
+    for p in (parts or [[]])[0] or []:
+        if p is None:
+            break
+        dp.append(p)
     if len(dp) >= 3:
         return f"{dp[0]:04d}-{dp[1]:02d}-{dp[2]:02d}"
     if len(dp) == 2:

@@ -69,7 +69,12 @@ def validate_front_matter(article: str, week_label: str) -> list[str]:
 
 def extra_checks(article: str, week_label: str) -> list[str]:
     m = re.match(r"\A---[ \t]*\r?\n(.*?)\r?\n---", article, re.S)
-    data = yaml.safe_load(m.group(1)) if m else {}
+    try:
+        data = yaml.safe_load(m.group(1)) if m else {}
+    except yaml.YAMLError:
+        return ["front matter YAML 無法解析，其餘結構檢查略過"]
+    if not isinstance(data, dict):
+        data = {}
     problems = [f"缺欄位 {k}" for k in REQUIRED if k not in (data or {})]
     if not data:
         return problems
